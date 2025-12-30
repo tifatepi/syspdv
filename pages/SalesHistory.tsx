@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../App';
 import { ICONS, PAYMENT_METHODS } from '../constants';
-import { Search, Printer, X, Eye } from 'lucide-react';
+import { Search, Printer, X, Eye, TrendingUp } from 'lucide-react';
 
 const SalesHistory: React.FC = () => {
   const { sales } = useApp();
@@ -20,6 +20,11 @@ const SalesHistory: React.FC = () => {
   const getFormattedTime = (ts: string) => {
     const parts = ts.split(' ');
     return { date: parts[0], time: (parts[1] || '').substring(0, 5) };
+  };
+
+  const calculateSaleProfit = (sale: any) => {
+    const cost = sale.items.reduce((acc: number, item: any) => acc + (item.costPrice * item.quantity), 0);
+    return sale.total - cost;
   };
 
   const renderReceiptText = (sale: any) => {
@@ -150,7 +155,6 @@ const SalesHistory: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal Detalhe da Venda (Recibo Virtual) */}
       {selectedSale && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-6 bg-slate-900/90 backdrop-blur-sm">
           <div className="bg-white rounded-[40px] w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
@@ -162,6 +166,23 @@ const SalesHistory: React.FC = () => {
             </div>
             
             <div className="p-10 flex flex-col items-center">
+               {/* Painel de Lucro Exclusivo do Gestor */}
+               <div className="w-full mb-6 p-4 bg-emerald-50 border-2 border-emerald-100 rounded-2xl flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                     <div className="w-10 h-10 bg-emerald-500 text-white rounded-xl flex items-center justify-center">
+                        <TrendingUp size={20} />
+                     </div>
+                     <div>
+                        <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Lucro desta Venda</p>
+                        <p className="text-xl font-black text-emerald-700">R$ {calculateSaleProfit(selectedSale).toFixed(2)}</p>
+                     </div>
+                  </div>
+                  <div className="text-right">
+                     <p className="text-[10px] font-bold text-slate-400 uppercase">Custo Total</p>
+                     <p className="text-sm font-black text-slate-600">R$ {(selectedSale.total - calculateSaleProfit(selectedSale)).toFixed(2)}</p>
+                  </div>
+               </div>
+
                <div className="bg-slate-50 p-6 rounded-2xl w-full font-mono text-left text-[11px] border border-dashed border-slate-300 shadow-inner overflow-hidden mb-8">
                   <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
                     {renderReceiptText(selectedSale)}

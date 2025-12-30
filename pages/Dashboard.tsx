@@ -3,7 +3,7 @@ import React from 'react';
 import { useApp } from '../App';
 import { ICONS } from '../constants';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { AlertCircle, Calendar, Package } from 'lucide-react';
+import { AlertCircle, Calendar, Package, TrendingUp, DollarSign } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
   const { sales, products } = useApp();
@@ -24,9 +24,17 @@ const Dashboard: React.FC = () => {
     return days <= 10;
   });
 
+  // Cálculos Financeiros Hoje
+  const totalRevenue = sales.reduce((acc, s) => acc + s.total, 0);
+  const totalCostOfGoodsSold = sales.reduce((acc, s) => {
+    const saleCost = s.items.reduce((sum, item) => sum + (item.costPrice * item.quantity), 0);
+    return acc + saleCost;
+  }, 0);
+  const totalProfit = totalRevenue - totalCostOfGoodsSold;
+
   const stats = [
-    { label: 'Vendas Hoje', value: `R$ ${sales.reduce((acc, s) => acc + s.total, 0).toFixed(2)}`, icon: ICONS.PDV, color: 'bg-blue-500' },
-    { label: 'Total de Itens', value: products.length, icon: ICONS.Products, color: 'bg-green-500' },
+    { label: 'Vendas Hoje', value: `R$ ${totalRevenue.toFixed(2)}`, icon: ICONS.PDV, color: 'bg-blue-500' },
+    { label: 'Lucro Bruto', value: `R$ ${totalProfit.toFixed(2)}`, icon: <TrendingUp size={24} />, color: 'bg-emerald-500' },
     { label: 'Produtos Baixos', value: products.filter(p => p.stock <= p.minStock).length, icon: ICONS.Trash, color: 'bg-red-500' },
     { label: 'Validade Crítica', value: nearExpiryProducts.length, icon: <Calendar size={24} />, color: 'bg-orange-500' },
   ];
@@ -61,7 +69,6 @@ const Dashboard: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-          {/* Gráfico */}
           <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100">
             <div className="flex items-center justify-between mb-8">
               <h3 className="text-lg font-bold text-slate-800">Desempenho de Vendas (Hoje)</h3>
@@ -83,7 +90,6 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Alertas de Vencimento */}
           <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100">
             <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-3">
               <AlertCircle className="text-orange-500" size={24} /> Alertas de Validade (Próximos 10 dias)
