@@ -3,7 +3,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useApp } from '../App';
 import { Product, CartItem, Sale, Client } from '../types';
 import { CATEGORIES, PAYMENT_METHODS, ICONS } from '../constants';
-import { ShoppingCart, Search, Package, Plus, Minus, X, UserCheck, UserPlus } from 'lucide-react';
+import { ShoppingCart, Search, Package, Plus, Minus, X, UserCheck, UserPlus, User } from 'lucide-react';
 
 const PDV: React.FC = () => {
   const { products, setProducts, setSales, user, setHeldSales, clients } = useApp();
@@ -56,6 +56,15 @@ const PDV: React.FC = () => {
       return matchCategory && matchSearch;
     });
   }, [products, activeCategory, searchTerm]);
+
+  // Filtro de clientes sugeridos no modal de identificação
+  const matchedClients = useMemo(() => {
+    if (!cpfInput) return [];
+    return clients.filter(c => 
+      c.cpf.includes(cpfInput) || 
+      c.name.toLowerCase().includes(cpfInput.toLowerCase())
+    ).slice(0, 4); // Limita a 4 para não poluir o touch
+  }, [clients, cpfInput]);
 
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const total = Math.max(0, subtotal - discount);
@@ -124,6 +133,12 @@ const PDV: React.FC = () => {
     if (found) {
       setSelectedClient(found);
     }
+    setShowClientModal(false);
+  };
+
+  const selectClientFromList = (client: Client) => {
+    setSelectedClient(client);
+    setCpfInput(client.cpf);
     setShowClientModal(false);
   };
 
@@ -317,7 +332,7 @@ const PDV: React.FC = () => {
                   <UserCheck className="text-blue-600" size={20} />
                   <div>
                     <p className="text-[10px] font-black uppercase text-slate-400">Cliente Identificado</p>
-                    <p className="text-xs font-black text-slate-700">{selectedClient?.name || `CPF: ${cpfInput}`}</p>
+                    <p className="text-xs font-black text-slate-700 truncate max-w-[180px]">{selectedClient?.name || `CPF: ${cpfInput}`}</p>
                   </div>
                 </div>
                 <button onClick={() => { setSelectedClient(null); setCpfInput(''); }} className="text-slate-300 hover:text-red-500">
@@ -368,37 +383,74 @@ const PDV: React.FC = () => {
       {/* Modal Identificar Cliente */}
       {showClientModal && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-sm no-print">
-          <div className="bg-white rounded-[40px] w-full max-w-md p-8 shadow-2xl overflow-hidden">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Identificar Cliente</h2>
-              <button onClick={() => setShowClientModal(false)}><X size={24} className="text-slate-400" /></button>
-            </div>
-            
-            <div className="bg-slate-50 p-6 rounded-3xl mb-6">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Inserir CPF / CNPJ</p>
-              <div className="text-3xl font-black text-blue-600 tracking-widest min-h-[40px]">
-                {cpfInput || '000.000.000-00'}
+          <div className="bg-white rounded-[40px] w-full max-w-4xl p-8 shadow-2xl overflow-hidden flex flex-col md:flex-row gap-8">
+            <div className="flex-1">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Identificar Cliente</h2>
+                <button className="md:hidden" onClick={() => setShowClientModal(false)}><X size={24} className="text-slate-400" /></button>
+              </div>
+              
+              <div className="bg-slate-50 p-6 rounded-3xl mb-6">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Inserir CPF / CNPJ ou Nome</p>
+                <div className="text-3xl font-black text-blue-600 tracking-widest min-h-[40px] break-all">
+                  {cpfInput || '000.000.000-00'}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', 'OK'].map(key => (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      if (key === 'C') setCpfInput('');
+                      else if (key === 'OK') handleIdentifyCpf();
+                      else if (cpfInput.length < 11) setCpfInput(prev => prev + key);
+                    }}
+                    className={`h-16 rounded-2xl text-xl font-bold transition-all btn-touch-active ${
+                      key === 'OK' 
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' 
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    {key}
+                  </button>
+                ))}
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
-              {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', 'OK'].map(key => (
-                <button
-                  key={key}
-                  onClick={() => {
-                    if (key === 'C') setCpfInput('');
-                    else if (key === 'OK') handleIdentifyCpf();
-                    else if (cpfInput.length < 11) setCpfInput(prev => prev + key);
-                  }}
-                  className={`h-16 rounded-2xl text-xl font-bold transition-all btn-touch-active ${
-                    key === 'OK' 
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' 
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  {key}
-                </button>
-              ))}
+            {/* Listagem de Clientes Cadastrados (Matching) */}
+            <div className="w-full md:w-[320px] flex flex-col border-t md:border-t-0 md:border-l border-slate-100 pt-6 md:pt-0 md:pl-8">
+              <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Clientes Encontrados</h3>
+              <div className="flex-1 space-y-3 overflow-y-auto custom-scrollbar max-h-[300px] md:max-h-none">
+                {matchedClients.length > 0 ? (
+                  matchedClients.map(client => (
+                    <button 
+                      key={client.id}
+                      onClick={() => selectClientFromList(client)}
+                      className="w-full text-left p-4 rounded-2xl bg-slate-50 border-2 border-transparent hover:border-blue-500 hover:bg-blue-50 transition-all flex items-center gap-3 group"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                        <User size={18} />
+                      </div>
+                      <div className="overflow-hidden">
+                        <p className="font-bold text-slate-800 text-sm truncate">{client.name}</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">CPF: {client.cpf}</p>
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-40 text-slate-300 opacity-50">
+                    <UserPlus size={40} className="mb-2" />
+                    <p className="text-[10px] font-black uppercase text-center">Nenhum cliente<br/>corresponde à busca</p>
+                  </div>
+                )}
+              </div>
+              <button 
+                onClick={() => setShowClientModal(false)}
+                className="mt-6 w-full py-4 rounded-2xl bg-slate-100 text-slate-500 font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition-all hidden md:block"
+              >
+                Cancelar
+              </button>
             </div>
           </div>
         </div>
