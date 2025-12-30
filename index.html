@@ -9,19 +9,37 @@
     <style>
       /* Estilos de Impressão */
       @media print {
+        /* Configurações globais de página */
+        @page {
+          size: auto;
+          margin: 10mm;
+        }
+
         /* Se for o cupom fiscal (identificado pela classe print-content no PDV) */
         .print-content {
           width: 80mm !important;
           margin: 0 !important;
           padding: 5mm !important;
+          display: block !important;
         }
 
         /* Se for um relatório geral (identificado por não ser print-content) */
-        body:not(:has(.print-content)) {
-          width: 210mm; /* A4 width */
-          height: auto;
+        body {
           background: white !important;
-          padding: 10mm;
+          width: 100% !important;
+          height: auto !important;
+          overflow: visible !important;
+        }
+
+        #root {
+          height: auto !important;
+          overflow: visible !important;
+        }
+
+        main {
+          height: auto !important;
+          overflow: visible !important;
+          display: block !important;
         }
 
         .no-print, .no-print * { 
@@ -31,21 +49,24 @@
         .print-only { 
           display: block !important; 
         }
-        
-        #root { 
-          display: block !important; 
-        }
 
         /* Forçar cores na impressão */
         * {
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
+          color-adjust: exact !important;
         }
 
-        /* Evitar quebra de cards ao meio */
+        /* Garantir que cards e gráficos não quebrem no meio */
         .break-inside-avoid {
           page-break-inside: avoid;
           break-inside: avoid;
+          margin-bottom: 20px;
+        }
+        
+        canvas {
+          max-width: 100% !important;
+          height: auto !important;
         }
       }
 

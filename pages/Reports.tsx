@@ -37,16 +37,17 @@ const Reports: React.FC = () => {
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
   const handleExportPDF = () => {
+    // Abre o diálogo de impressão do navegador
     window.print();
   };
 
   const handleExportExcel = () => {
     if (sales.length === 0) {
-      alert("Não há dados de vendas para exportar.");
+      alert("Não há dados de vendas para exportar no momento.");
       return;
     }
 
-    // Cabeçalhos do CSV
+    // Cabeçalhos do CSV (Usando ponto e vírgula para compatibilidade com Excel BR)
     const headers = ["ID Venda", "Data/Hora", "Cliente", "Metodo Pagamento", "Subtotal", "Desconto", "Total"];
     
     // Linhas de dados
@@ -55,24 +56,30 @@ const Reports: React.FC = () => {
       s.timestamp,
       s.clientName || 'Consumidor',
       s.paymentMethod,
-      s.subtotal.toFixed(2),
-      s.discount.toFixed(2),
-      s.total.toFixed(2)
+      s.subtotal.toFixed(2).replace('.', ','),
+      s.discount.toFixed(2).replace('.', ','),
+      s.total.toFixed(2).replace('.', ',')
     ]);
 
-    // Unir tudo
-    const csvContent = [headers, ...csvRows].map(e => e.join(",")).join("\n");
+    // Unir tudo com ponto e vírgula (delimitador padrão Excel Brasil)
+    // Adicionamos \uFEFF no início para forçar o Excel a abrir como UTF-8 (BOM)
+    const csvContent = "\uFEFF" + [headers, ...csvRows].map(e => e.join(";")).join("\n");
     
-    // Criar blob e download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `relatorio_vendas_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Criar blob e download automático
+    try {
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", `vendas_quicktouch_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Erro ao exportar Excel:", error);
+      alert("Erro ao gerar o arquivo de exportação.");
+    }
   };
 
   return (
@@ -85,12 +92,14 @@ const Reports: React.FC = () => {
         <div className="flex gap-4">
            <button 
             onClick={handleExportPDF}
+            title="Imprimir relatório em PDF"
             className="px-6 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-xs hover:bg-slate-200 transition-all btn-touch-active flex items-center gap-2"
            >
              <FileText size={16} /> GERAR PDF
            </button>
            <button 
             onClick={handleExportExcel}
+            title="Exportar dados para Excel (CSV)"
             className="px-6 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs hover:bg-slate-800 transition-all shadow-xl btn-touch-active flex items-center gap-2"
            >
              <Download size={16} /> EXPORTAR EXCEL (CSV)
