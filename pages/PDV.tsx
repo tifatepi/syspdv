@@ -196,49 +196,41 @@ const PDV: React.FC = () => {
 
   const getFormattedTime = (ts: string) => {
     const parts = ts.split(' ');
-    return { date: parts[0] + ',', time: (parts[1] || '').substring(0, 5) };
+    return { date: parts[0], time: (parts[1] || '').substring(0, 5) };
   };
 
   const renderReceiptText = (sale: any) => {
     const { date, time } = getFormattedTime(sale.timestamp);
     const SEP = "--------------------------------";
     
-    // Header
-    let receipt = `      MERCEARIA DO CLAUDIO\n`;
+    let receipt = `${SEP}\n`;
+    receipt += `      MERCEARIA DO CLAUDIO\n`;
     receipt += `     CNPJ: 00.000.000/0001-00\n`;
-    receipt += `${SEP}\n`;
-    receipt += `CLIENTE: CPF: ${sale.clientCpf}\n`;
     receipt += `${SEP}\n`;
     receipt += `Data: ${date}  Hora: ${time}\n`;
     receipt += `Operador: ${sale.operator}\n`;
     receipt += `${SEP}\n`;
     
-    // Table Header
-    // Produto (15) | Qtd (6) | Valor (11) = 32
     receipt += `Produto        Qtd   Valor\n`;
 
-    // Items
     sale.items.forEach((it: any) => {
       const name = it.name.substring(0, 14).padEnd(15, ' ');
-      const qty = it.quantity.toString().padStart(6, ' ');
-      const val = (it.price * it.quantity).toFixed(2).padStart(11, ' ');
+      const qty = it.quantity.toString().padStart(4, ' ');
+      const val = (it.price * it.quantity).toFixed(2).replace('.', ',').padStart(11, ' ');
       receipt += `${name}${qty}${val}\n`;
     });
 
     receipt += `${SEP}\n`;
     
-    // Totals
-    // Label (15) | Value (17) = 32
-    receipt += `Subtotal:`.padEnd(15, ' ') + sale.subtotal.toFixed(2).padStart(17, ' ') + `\n`;
-    receipt += `Desconto:`.padEnd(15, ' ') + sale.discount.toFixed(2).padStart(17, ' ') + `\n`;
-    receipt += `TOTAL:`.padEnd(15, ' ') + sale.total.toFixed(2).padStart(17, ' ') + `\n`;
+    receipt += `Subtotal:`.padEnd(15, ' ') + sale.subtotal.toFixed(2).replace('.', ',').padStart(17, ' ') + `\n`;
+    receipt += `Desconto:`.padEnd(15, ' ') + sale.discount.toFixed(2).replace('.', ',').padStart(17, ' ') + `\n`;
+    receipt += `TOTAL:`.padEnd(15, ' ') + sale.total.toFixed(2).replace('.', ',').padStart(17, ' ') + `\n`;
     receipt += `${SEP}\n`;
 
-    // Payment Info
     receipt += `Pagamento: ${sale.paymentMethod}\n`;
     if (sale.paymentMethod === 'DINHEIRO') {
         receipt += `Valor Recebido: ${sale.amountReceived.toFixed(2)}\n`;
-        receipt += `Troco: ${sale.change.toFixed(2)}\n`;
+        receipt += ` Troco: ${sale.change.toFixed(2)}\n`;
     }
 
     receipt += `${SEP}\n`;
