@@ -13,8 +13,16 @@
           margin: 0;
           size: 80mm auto;
         }
-        .no-print { display: none !important; }
-        .print-only { display: block !important; }
+        
+        /* Oculta elementos que não devem sair no papel */
+        .no-print, .no-print * { 
+          display: none !important; 
+        }
+        
+        /* Garante que o container de impressão apareça */
+        .print-only { 
+          display: block !important; 
+        }
         
         body { 
           width: 80mm; 
@@ -23,21 +31,23 @@
           background-color: white !important;
           color: black !important;
           font-family: 'Courier New', Courier, monospace;
-          font-size: 12pt;
         }
 
-        #root { display: none !important; } /* Esconde a aplicação React inteira para imprimir apenas o portal de recibo se necessário, ou usamos classes específicas */
-        
-        /* Se o recibo estiver dentro do root, garantimos que apenas ele apareça */
-        body > *:not(.print-content) {
-          display: none !important;
+        /* Corrigido: Não podemos esconder o #root pois o React está dentro dele */
+        #root { 
+          display: block !important; 
         }
+
+        /* Ajustes finos para garantir que o recibo ocupe a largura correta */
         .print-content {
           display: block !important;
-          width: 100%;
+          width: 80mm !important;
+          padding: 10px !important;
+          box-sizing: border-box !important;
         }
       }
 
+      /* No navegador (tela), não mostra o conteúdo de impressão */
       .print-only { display: none; }
       
       /* Custom Scrollbar */

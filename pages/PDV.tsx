@@ -148,63 +148,65 @@ const PDV: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-[#f1f5f9] select-none">
-      {/* AREA DE IMPRESSAO */}
+      {/* AREA DE IMPRESSAO - Esta div é controlada pelo @media print no index.html */}
       {lastSale && (
-        <div className="print-only print-content p-4 font-mono text-[12pt] leading-tight">
-          <div className="text-center font-bold mb-4">
+        <div className="print-only print-content">
+          <div style={{ textAlign: 'center', fontWeight: 'bold', marginBottom: '10px' }}>
             QUICKTOUCH POS SISTEMAS<br/>
             CNPJ: 00.000.000/0001-00<br/>
-            --------------------------------
-            RECIBO DE VENDA
+            --------------------------------<br/>
+            RECIBO DE VENDA<br/>
             --------------------------------
           </div>
-          <div className="mb-2">
+          <div style={{ marginBottom: '10px' }}>
             DATA: {lastSale.timestamp}<br/>
             OPERADOR: {lastSale.operator}<br/>
             PEDIDO: #{lastSale.id}
           </div>
-          <div className="mb-2 border-t border-dashed pt-2">
+          <div style={{ marginBottom: '10px', borderTop: '1px dashed black', paddingTop: '5px' }}>
             CONSUMIDOR: {lastSale.clientCpf}<br/>
             {lastSale.clientName && `NOME: ${lastSale.clientName}`}
           </div>
-          <div className="border-b border-dashed mb-2"></div>
-          <div className="mb-2">
-            <div className="flex justify-between font-bold">
+          <div style={{ borderBottom: '1px dashed black', marginBottom: '10px' }}></div>
+          <div style={{ marginBottom: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
               <span>ITEM</span>
               <span>TOTAL</span>
             </div>
             {lastSale.items.map((it: any) => (
-              <div key={it.id} className="flex justify-between">
+              <div key={it.id} style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>{it.quantity}x {it.name.substring(0, 18)}</span>
-                <span>{(it.price * it.quantity).toFixed(2)}</span>
+                <span>R$ {(it.price * it.quantity).toFixed(2)}</span>
               </div>
             ))}
           </div>
-          <div className="border-t border-dashed pt-2">
-            <div className="flex justify-between">
+          <div style={{ borderTop: '1px dashed black', paddingTop: '5px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>SUBTOTAL:</span>
               <span>R$ {lastSale.subtotal.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between">
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>DESCONTO:</span>
               <span>- R$ {lastSale.discount.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between font-bold text-lg mt-1 border-t pt-1">
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.2em', marginTop: '5px', borderTop: '1px solid black', paddingTop: '5px' }}>
               <span>TOTAL:</span>
               <span>R$ {lastSale.total.toFixed(2)}</span>
             </div>
           </div>
-          <div className="mt-4 border-t border-dashed pt-2">
+          <div style={{ marginTop: '20px', borderTop: '1px dashed black', paddingTop: '10px' }}>
             FORMA DE PAGAMENTO: {lastSale.paymentMethod}<br/>
-            --------------------------------
-            <div className="text-center mt-2">
+            --------------------------------<br/>
+            <div style={{ textAlign: 'center', marginTop: '10px' }}>
               OBRIGADO PELA PREFERENCIA!
             </div>
           </div>
+          {/* Espaço extra para a guilhotina da impressora */}
+          <div style={{ height: '50px' }}></div>
         </div>
       )}
 
-      {/* Sidebar Categorias */}
+      {/* Sidebar Categorias (NÃO IMPRIME) */}
       <aside className="w-20 bg-white border-r flex flex-col items-center py-4 gap-2 no-print shrink-0">
         <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white mb-4 shadow-lg shadow-blue-200">
           <ShoppingCart size={24} />
@@ -228,6 +230,7 @@ const PDV: React.FC = () => {
         </div>
       </aside>
 
+      {/* Main PDV Area (NÃO IMPRIME) */}
       <div className="flex-1 flex flex-col p-3 gap-3 overflow-hidden no-print">
         <div className="flex gap-3 items-center">
           <div className="relative flex-1">
@@ -277,7 +280,7 @@ const PDV: React.FC = () => {
         </div>
       </div>
 
-      {/* Carrinho lateral */}
+      {/* Carrinho lateral (NÃO IMPRIME) */}
       <div className="w-[380px] bg-white border-l shadow-2xl flex flex-col shrink-0 no-print">
         <div className="p-4 border-b flex justify-between items-center bg-slate-50">
           <div className="flex items-center gap-2">
@@ -324,7 +327,6 @@ const PDV: React.FC = () => {
           )}
         </div>
 
-        {/* Informações do Cliente no Carrinho */}
         <div className="px-5 py-3 border-t bg-blue-50/50">
            {selectedClient || cpfInput ? (
              <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-blue-200 shadow-sm">
@@ -349,7 +351,6 @@ const PDV: React.FC = () => {
            )}
         </div>
 
-        {/* Rodapé Dinâmico */}
         <div className="p-5 bg-slate-900 text-white rounded-t-[32px] shadow-[0_-10px_30px_rgba(0,0,0,0.1)]">
           <div className="space-y-2 mb-4">
             <div className="flex justify-between items-center text-slate-400 text-[10px] font-black uppercase tracking-widest">
@@ -380,7 +381,7 @@ const PDV: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal Identificar Cliente */}
+      {/* Modais (NÃO IMPRIMEM - no-print aplicado nos containers superiores) */}
       {showClientModal && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-sm no-print">
           <div className="bg-white rounded-[40px] w-full max-w-4xl p-8 shadow-2xl overflow-hidden flex flex-col md:flex-row gap-8">
@@ -418,7 +419,6 @@ const PDV: React.FC = () => {
               </div>
             </div>
 
-            {/* Listagem de Clientes Cadastrados (Matching) */}
             <div className="w-full md:w-[320px] flex flex-col border-t md:border-t-0 md:border-l border-slate-100 pt-6 md:pt-0 md:pl-8">
               <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Clientes Encontrados</h3>
               <div className="flex-1 space-y-3 overflow-y-auto custom-scrollbar max-h-[300px] md:max-h-none">
@@ -456,7 +456,6 @@ const PDV: React.FC = () => {
         </div>
       )}
 
-      {/* Modal Pagamento */}
       {showPaymentModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-sm no-print">
           <div className="bg-white rounded-[40px] w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col md:flex-row">
@@ -484,7 +483,7 @@ const PDV: React.FC = () => {
         </div>
       )}
 
-      {/* Tela de Recibo Final */}
+      {/* Tela de Recibo Final - VISUALIZAÇÃO EM TELA (no-print) */}
       {showReceipt && lastSale && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-white p-6 no-print overflow-y-auto">
           <div className="flex flex-col items-center gap-6 max-w-sm w-full text-center">
