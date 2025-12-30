@@ -3,7 +3,7 @@ import React from 'react';
 import { useApp } from '../App';
 import { ICONS } from '../constants';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area } from 'recharts';
-import { TrendingUp, Award, DollarSign, Package, Calendar, Download, FileText } from 'lucide-react';
+import { TrendingUp, Award, DollarSign, Package, Calendar, Download, FileText, ClipboardList } from 'lucide-react';
 
 const Reports: React.FC = () => {
   const { sales, products } = useApp();
@@ -37,7 +37,6 @@ const Reports: React.FC = () => {
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
   const handleExportPDF = () => {
-    // Abre o diálogo de impressão do navegador
     window.print();
   };
 
@@ -47,10 +46,7 @@ const Reports: React.FC = () => {
       return;
     }
 
-    // Cabeçalhos do CSV (Usando ponto e vírgula para compatibilidade com Excel BR)
     const headers = ["ID Venda", "Data/Hora", "Cliente", "Metodo Pagamento", "Subtotal", "Desconto", "Total"];
-    
-    // Linhas de dados
     const csvRows = sales.map(s => [
       s.id,
       s.timestamp,
@@ -61,11 +57,8 @@ const Reports: React.FC = () => {
       s.total.toFixed(2).replace('.', ',')
     ]);
 
-    // Unir tudo com ponto e vírgula (delimitador padrão Excel Brasil)
-    // Adicionamos \uFEFF no início para forçar o Excel a abrir como UTF-8 (BOM)
     const csvContent = "\uFEFF" + [headers, ...csvRows].map(e => e.join(";")).join("\n");
     
-    // Criar blob e download automático
     try {
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement("a");
@@ -77,8 +70,65 @@ const Reports: React.FC = () => {
       link.click();
       document.body.removeChild(link);
     } catch (error) {
-      console.error("Erro ao exportar Excel:", error);
       alert("Erro ao gerar o arquivo de exportação.");
+    }
+  };
+
+  const handleGenerateInventoryBalance = () => {
+    if (products.length === 0) {
+      alert("Não há produtos no catálogo para gerar balanço.");
+      return;
+    }
+
+    // Cabeçalhos para o Balanço de Inventário
+    const headers = ["Produto", "Categoria", "SKU", "Estoque Atual", "Preco Custo (Un)", "Preco Venda (Un)", "Valor Custo Total", "Valor Venda Total", "Margem Est. (%)"];
+    
+    const csvRows = products.map(p => {
+      const totalCost = p.costPrice * p.stock;
+      const totalSale = p.price * p.stock;
+      const margin = p.price > 0 ? ((p.price - p.costPrice) / p.price) * 100 : 0;
+
+      return [
+        p.name,
+        p.category,
+        p.sku,
+        p.stock,
+        p.costPrice.toFixed(2).replace('.', ','),
+        p.price.toFixed(2).replace('.', ','),
+        totalCost.toFixed(2).replace('.', ','),
+        totalSale.toFixed(2).replace('.', ','),
+        margin.toFixed(2).replace('.', ',') + "%"
+      ];
+    });
+
+    const totalInventoryCost = products.reduce((acc, p) => acc + (p.costPrice * p.stock), 0);
+    const totalInventorySale = products.reduce((acc, p) => acc + (p.price * p.stock), 0);
+
+    // Linha de Resumo
+    const summaryRows = [
+      [],
+      ["RESUMO DO INVENTARIO"],
+      ["Total Itens Unicos", products.length],
+      ["Total Pecas em Estoque", products.reduce((acc, p) => acc + p.stock, 0)],
+      ["Valor Total Custo", "R$ " + totalInventoryCost.toFixed(2).replace('.', ',')],
+      ["Valor Total Venda", "R$ " + totalInventorySale.toFixed(2).replace('.', ',')],
+      ["Lucro Potencial Bruto", "R$ " + (totalInventorySale - totalInventoryCost).toFixed(2).replace('.', ',')]
+    ];
+
+    const csvContent = "\uFEFF" + [headers, ...csvRows, ...summaryRows].map(e => e.join(";")).join("\n");
+
+    try {
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", `balanco_estoque_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      alert("Erro ao gerar balanço de estoque.");
     }
   };
 
@@ -92,14 +142,12 @@ const Reports: React.FC = () => {
         <div className="flex gap-4">
            <button 
             onClick={handleExportPDF}
-            title="Imprimir relatório em PDF"
             className="px-6 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-xs hover:bg-slate-200 transition-all btn-touch-active flex items-center gap-2"
            >
              <FileText size={16} /> GERAR PDF
            </button>
            <button 
             onClick={handleExportExcel}
-            title="Exportar dados para Excel (CSV)"
             className="px-6 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs hover:bg-slate-800 transition-all shadow-xl btn-touch-active flex items-center gap-2"
            >
              <Download size={16} /> EXPORTAR EXCEL (CSV)
@@ -239,7 +287,12 @@ const Reports: React.FC = () => {
                  <Calendar className="text-blue-500" />
                  <span className="text-xs font-black uppercase tracking-widest">Giro de estoque: 14 dias</span>
               </div>
-              <button className="text-[10px] font-black text-blue-400 hover:text-white transition-colors no-print">GERAR BALANÇO</button>
+              <button 
+                onClick={handleGenerateInventoryBalance}
+                className="px-4 py-2 bg-blue-500 hover:bg-blue-400 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors no-print flex items-center gap-2"
+              >
+                <ClipboardList size={14} /> GERAR BALANÇO
+              </button>
            </div>
         </div>
       </div>
