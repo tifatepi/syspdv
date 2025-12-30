@@ -3,12 +3,10 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useApp } from '../App';
 import { Product, CartItem, Sale, Client } from '../types';
 import { PAYMENT_METHODS, ICONS } from '../constants';
-// Fixed: Added missing Printer to the imports from lucide-react
-import { ShoppingCart, Search, Package, Plus, Minus, X, UserCheck, UserPlus, User, ArrowLeft, Lock, LogIn, Printer } from 'lucide-react';
+import { ShoppingCart, Search, Package, Plus, Minus, X, UserCheck, UserPlus, User, ArrowLeft, Lock, LogIn, Printer, UserCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const PDV: React.FC = () => {
-  // Fixed: Removed setHeldSales as it does not exist in AppContextType
   const { products, setProducts, setSales, user, clients, categories, cashSession } = useApp();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [activeCategory, setActiveCategory] = useState('Todos');
@@ -34,15 +32,8 @@ const PDV: React.FC = () => {
       if (e.key === 'F12' && cart.length > 0) { e.preventDefault(); setShowPaymentModal(true); }
       
       if (showClientModal) {
-        if (e.key >= '0' && e.key <= '9') {
-          if (cpfInput.length < 11) setCpfInput(prev => prev + e.key);
-        } else if (e.key === 'Backspace') {
-          setCpfInput(prev => prev.slice(0, -1));
-        } else if (e.key === 'Enter') {
-          handleIdentifyCpf();
-        } else if (e.key === 'Escape') {
-          setShowClientModal(false);
-        }
+        if (e.key === 'Enter') handleIdentifyCpf();
+        if (e.key === 'Escape') setShowClientModal(false);
         return;
       }
 
@@ -205,6 +196,7 @@ const PDV: React.FC = () => {
     const SEP = "--------------------------------";
     let receipt = `${SEP}\n      MERCEARIA DO CLAUDIO\n     CNPJ: 00.000.000/0001-00\n${SEP}\n`;
     receipt += `Data: ${date}  Hora: ${time}\nOperador: ${sale.operator}\n${SEP}\n`;
+    receipt += `Cliente: ${sale.clientName || sale.clientCpf || 'N/I'}\n${SEP}\n`;
     receipt += `Produto        Qtd   Valor\n`;
     sale.items.forEach((it: any) => {
       const name = it.name.substring(0, 14).padEnd(15, ' ');
@@ -334,6 +326,19 @@ const PDV: React.FC = () => {
           </span>
         </div>
 
+        {/* Info Cliente no Cupom */}
+        {selectedClient && (
+          <div className="p-3 bg-blue-50 border-b flex items-center justify-between">
+             <div className="flex items-center gap-2 text-blue-700">
+                <UserCircle2 size={16} />
+                <span className="text-[10px] font-black uppercase truncate max-w-[200px]">{selectedClient.name}</span>
+             </div>
+             <button onClick={() => setSelectedClient(null)} className="text-blue-300 hover:text-red-500">
+                <X size={14} />
+             </button>
+          </div>
+        )}
+
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           {cart.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-slate-300 p-8 text-center opacity-50">
@@ -367,6 +372,17 @@ const PDV: React.FC = () => {
         </div>
 
         <div className="p-5 bg-slate-900 text-white rounded-t-[32px] shadow-[0_-10px_30px_rgba(0,0,0,0.1)]">
+          {/* Botão Identificar Cliente (CPF na Nota) */}
+          <button 
+            onClick={() => setShowClientModal(true)}
+            className={`w-full mb-4 py-3 rounded-xl flex items-center justify-center gap-2 font-black text-[10px] uppercase tracking-widest transition-all ${
+              selectedClient ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-white/5 hover:bg-white/10 text-white'
+            }`}
+          >
+            {selectedClient ? <UserCheck size={16} /> : <UserPlus size={16} />}
+            {selectedClient ? 'CLIENTE IDENTIFICADO' : 'IDENTIFICAR CLIENTE (CPF)'}
+          </button>
+
           <div className="flex justify-between items-end mb-6">
             <span className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em]">Total Final</span>
             <span className="text-4xl font-black tracking-tighter leading-none">R$ {total.toFixed(2)}</span>
@@ -378,6 +394,69 @@ const PDV: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal Identificar Cliente / CPF */}
+      {showClientModal && (
+        <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-sm no-print">
+          <div className="bg-white rounded-[40px] w-full max-w-lg p-10 shadow-2xl animate-in zoom-in-95 duration-200">
+             <div className="flex justify-between items-center mb-8">
+                <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Identificar Cliente</h2>
+                <button onClick={() => setShowClientModal(false)} className="text-slate-400 hover:text-slate-600"><X size={24} /></button>
+             </div>
+             
+             <div className="space-y-6">
+                <div className="flex flex-col gap-2">
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Digite o CPF ou Nome</label>
+                   <div className="relative">
+                      <User size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                      <input 
+                        autoFocus
+                        type="text" 
+                        placeholder="Ex: 123.456.789-00"
+                        className="w-full h-16 pl-12 pr-4 bg-slate-50 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none text-2xl font-black transition-all"
+                        value={cpfInput}
+                        onChange={(e) => setCpfInput(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleIdentifyCpf()}
+                      />
+                   </div>
+                </div>
+
+                {matchedClients.length > 0 && (
+                  <div className="space-y-2">
+                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Resultados Encontrados:</p>
+                     <div className="grid grid-cols-1 gap-2">
+                        {matchedClients.map(c => (
+                          <button 
+                            key={c.id} 
+                            onClick={() => selectClientFromList(c)}
+                            className="p-4 bg-slate-50 hover:bg-blue-50 text-left rounded-2xl border-2 border-transparent hover:border-blue-200 transition-all group"
+                          >
+                             <div className="flex justify-between items-center">
+                                <div>
+                                   <p className="font-black text-slate-700 group-hover:text-blue-600">{c.name}</p>
+                                   <p className="text-xs font-bold text-slate-400">{c.cpf}</p>
+                                </div>
+                                <Plus size={16} className="text-blue-500" />
+                             </div>
+                          </button>
+                        ))}
+                     </div>
+                  </div>
+                )}
+             </div>
+
+             <div className="flex gap-4 mt-10">
+                <button onClick={() => setShowClientModal(false)} className="flex-1 py-5 bg-slate-100 text-slate-400 font-black rounded-2xl text-xs uppercase tracking-widest">CANCELAR</button>
+                <button 
+                  onClick={handleIdentifyCpf}
+                  className="flex-1 py-5 bg-blue-600 text-white font-black rounded-2xl text-xs uppercase tracking-widest shadow-xl shadow-blue-900/20"
+                >
+                  CONFIRMAR (ENTER)
+                </button>
+             </div>
+          </div>
+        </div>
+      )}
 
       {showPaymentModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-sm no-print">
