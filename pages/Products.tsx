@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useApp } from '../App';
 import { Product } from '../types';
 import { ICONS } from '../constants';
-import { Tag, Plus, Trash2, X, Calendar, Package } from 'lucide-react';
+import { Tag, Plus, Trash2, X, Calendar, Package, DollarSign, Percent } from 'lucide-react';
 
 const Products: React.FC = () => {
   const { products, setProducts, categories, setCategories } = useApp();
@@ -69,6 +69,7 @@ const Products: React.FC = () => {
       sku: formData.get('sku') as string,
       barcode: formData.get('barcode') as string,
       price: parseFloat(formData.get('price') as string),
+      costPrice: parseFloat(formData.get('costPrice') as string) || 0,
       stock: parseInt(formData.get('stock') as string),
       minStock: parseInt(formData.get('minStock') as string),
       category: formData.get('category') as string,
@@ -82,12 +83,16 @@ const Products: React.FC = () => {
       const newProduct: Product = {
         ...productData as Product,
         id: Math.random().toString(36).substring(7),
-        costPrice: 0
       };
       setProducts(prev => [...prev, newProduct]);
     }
     setIsModalOpen(false);
     setEditingProduct(null);
+  };
+
+  const calculateMargin = (price: number, cost: number) => {
+    if (price <= 0) return 0;
+    return ((price - cost) / price) * 100;
   };
 
   return (
@@ -135,7 +140,7 @@ const Products: React.FC = () => {
               <tr className="bg-slate-50 border-b-2 border-slate-100">
                 <th className="px-10 py-6 text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Item / Lote</th>
                 <th className="px-10 py-6 text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Validade</th>
-                <th className="px-10 py-6 text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Preço</th>
+                <th className="px-10 py-6 text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Precificação</th>
                 <th className="px-10 py-6 text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Estoque</th>
                 <th className="px-10 py-6 text-xs font-black text-slate-400 uppercase tracking-[0.2em] text-right">Ações</th>
               </tr>
@@ -143,6 +148,7 @@ const Products: React.FC = () => {
             <tbody className="divide-y-2 divide-slate-50">
               {filtered.map(product => {
                 const expiry = getExpiryStatus(product.expiryDate);
+                const margin = calculateMargin(product.price, product.costPrice);
                 return (
                   <tr key={product.id} className="hover:bg-slate-50/50 transition-colors group">
                     <td className="px-10 py-8">
@@ -168,7 +174,15 @@ const Products: React.FC = () => {
                       )}
                     </td>
                     <td className="px-10 py-8">
-                      <span className="text-2xl font-black text-blue-600">R$ {product.price.toFixed(2)}</span>
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-2">
+                           <span className="text-2xl font-black text-blue-600">R$ {product.price.toFixed(2)}</span>
+                           <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${margin > 30 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                             {margin.toFixed(0)}% MARGEM
+                           </span>
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">Custo: R$ {product.costPrice.toFixed(2)}</span>
+                      </div>
                     </td>
                     <td className="px-10 py-8">
                       <div className="flex items-center gap-3">
@@ -275,16 +289,12 @@ const Products: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div className="flex flex-col gap-2">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div className="flex flex-col md:col-span-2 gap-2">
                   <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Código de Barras</label>
                   <input name="barcode" defaultValue={editingProduct?.barcode} type="text" className="h-16 p-5 bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl outline-none font-bold text-xl transition-all" />
                 </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Preço de Venda R$</label>
-                  <input name="price" required step="0.01" defaultValue={editingProduct?.price} type="number" className="h-16 p-5 bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl outline-none font-black text-3xl transition-all" />
-                </div>
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 md:col-span-2">
                   <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Categoria</label>
                   <select name="category" defaultValue={editingProduct?.category} className="h-16 p-5 bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl outline-none font-bold text-lg transition-all appearance-none">
                     {categories.filter(c => c !== 'Todos').map(c => <option key={c} value={c}>{c}</option>)}
@@ -292,7 +302,24 @@ const Products: React.FC = () => {
                 </div>
               </div>
 
-              {/* Novos Campos: Validade e Lote */}
+              {/* Seção de Precificação */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-slate-50 p-8 rounded-[32px] border-2 border-slate-100">
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-black text-emerald-600 uppercase tracking-widest flex items-center gap-2">
+                    <DollarSign size={14} /> Preço de Custo R$
+                  </label>
+                  <input name="costPrice" required step="0.01" defaultValue={editingProduct?.costPrice} type="number" className="h-16 p-5 bg-white border-2 border-transparent focus:border-emerald-500 rounded-2xl outline-none font-black text-3xl transition-all" placeholder="0,00" />
+                  <p className="text-[10px] font-bold text-slate-400 uppercase">Quanto você pagou pelo produto</p>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-black text-blue-600 uppercase tracking-widest flex items-center gap-2">
+                    <DollarSign size={14} /> Preço de Venda R$
+                  </label>
+                  <input name="price" required step="0.01" defaultValue={editingProduct?.price} type="number" className="h-16 p-5 bg-white border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-black text-3xl transition-all" placeholder="0,00" />
+                  <p className="text-[10px] font-bold text-slate-400 uppercase">Preço final para o consumidor</p>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-blue-50 p-6 rounded-3xl border-2 border-blue-100">
                 <div className="flex flex-col gap-2">
                   <label className="text-xs font-black text-blue-600 uppercase tracking-widest flex items-center gap-2">
