@@ -21,15 +21,32 @@ const PDV: React.FC = () => {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  // Monitoramento de teclado físico
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Atalhos Globais
       if (e.key === 'F1') { e.preventDefault(); searchInputRef.current?.focus(); }
       if (e.key === 'F12' && cart.length > 0) { e.preventDefault(); setShowPaymentModal(true); }
+      
+      // Lógica específica para o Modal de Cliente
+      if (showClientModal) {
+        if (e.key >= '0' && e.key <= '9') {
+          if (cpfInput.length < 11) setCpfInput(prev => prev + e.key);
+        } else if (e.key === 'Backspace') {
+          setCpfInput(prev => prev.slice(0, -1));
+        } else if (e.key === 'Enter') {
+          handleIdentifyCpf();
+        } else if (e.key === 'Escape') {
+          setShowClientModal(false);
+        }
+        return; // Evita outros atalhos enquanto o modal está aberto
+      }
+
       if (e.key === 'Escape') { e.preventDefault(); resetVenda(); }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [cart]);
+  }, [cart, showClientModal, cpfInput]); // Dependências cruciais para capturar o estado atual
 
   const playBeep = (type: 'add' | 'success' | 'cancel' = 'add') => {
     try {
@@ -379,14 +396,19 @@ const PDV: React.FC = () => {
           <div className="bg-white rounded-[40px] w-full max-w-4xl p-8 shadow-2xl overflow-hidden flex flex-col md:flex-row gap-8">
             <div className="flex-1">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Identificar Cliente</h2>
+                <div className="flex items-center gap-3">
+                   <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white">
+                     <UserPlus size={20} />
+                   </div>
+                   <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Identificar Cliente</h2>
+                </div>
                 <button className="md:hidden" onClick={() => setShowClientModal(false)}><X size={24} className="text-slate-400" /></button>
               </div>
               
-              <div className="bg-slate-50 p-6 rounded-3xl mb-6">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Inserir CPF / CNPJ ou Nome</p>
-                <div className="text-3xl font-black text-blue-600 tracking-widest min-h-[40px] break-all">
-                  {cpfInput || '000.000.000-00'}
+              <div className="bg-slate-50 p-6 rounded-3xl mb-4 border-2 border-slate-100">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Use o teclado físico ou botões</p>
+                <div className="text-4xl font-black text-blue-600 tracking-widest min-h-[48px] break-all flex items-center justify-center">
+                  {cpfInput || <span className="text-slate-200">000.000.000-00</span>}
                 </div>
               </div>
 
@@ -409,10 +431,13 @@ const PDV: React.FC = () => {
                   </button>
                 ))}
               </div>
+              <p className="text-[10px] text-center mt-4 font-bold text-slate-400 uppercase tracking-widest">
+                ENTER p/ confirmar • ESC p/ sair • BACKSPACE p/ apagar
+              </p>
             </div>
 
             <div className="w-full md:w-[320px] flex flex-col border-t md:border-t-0 md:border-l border-slate-100 pt-6 md:pt-0 md:pl-8">
-              <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Clientes Encontrados</h3>
+              <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Sugestões de Cadastro</h3>
               <div className="flex-1 space-y-3 overflow-y-auto custom-scrollbar max-h-[300px] md:max-h-none">
                 {matchedClients.length > 0 ? (
                   matchedClients.map(client => (
@@ -433,7 +458,7 @@ const PDV: React.FC = () => {
                 ) : (
                   <div className="flex flex-col items-center justify-center h-40 text-slate-300 opacity-50">
                     <UserPlus size={40} className="mb-2" />
-                    <p className="text-[10px] font-black uppercase text-center">Nenhum cliente<br/>corresponde à busca</p>
+                    <p className="text-[10px] font-black uppercase text-center">Digite o CPF para<br/>buscar cliente</p>
                   </div>
                 )}
               </div>
@@ -441,7 +466,7 @@ const PDV: React.FC = () => {
                 onClick={() => setShowClientModal(false)}
                 className="mt-6 w-full py-4 rounded-2xl bg-slate-100 text-slate-500 font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition-all hidden md:block"
               >
-                Cancelar
+                Voltar
               </button>
             </div>
           </div>
