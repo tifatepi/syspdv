@@ -3,7 +3,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useApp } from '../App';
 import { Product, CartItem, Sale, Client } from '../types';
 import { PAYMENT_METHODS, ICONS } from '../constants';
-import { ShoppingCart, Search, Package, Plus, Minus, X, UserCheck, UserPlus, User } from 'lucide-react';
+import { ShoppingCart, Search, Package, Plus, Minus, X, UserCheck, UserPlus, User, ArrowLeft } from 'lucide-react';
 
 const PDV: React.FC = () => {
   const { products, setProducts, setSales, user, setHeldSales, clients, categories } = useApp();
@@ -18,6 +18,10 @@ const PDV: React.FC = () => {
   
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [cpfInput, setCpfInput] = useState('');
+
+  // Estados para Pagamento em Dinheiro
+  const [isCashPayment, setIsCashPayment] = useState(false);
+  const [amountReceived, setAmountReceived] = useState<string>('');
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -39,14 +43,23 @@ const PDV: React.FC = () => {
         } else if (e.key === 'Escape') {
           setShowClientModal(false);
         }
-        return; // Evita outros atalhos enquanto o modal está aberto
+        return;
       }
 
-      if (e.key === 'Escape') { e.preventDefault(); resetVenda(); }
+      if (e.key === 'Escape') { 
+        if (showPaymentModal) {
+            setShowPaymentModal(false);
+            setIsCashPayment(false);
+            setAmountReceived('');
+        } else {
+            e.preventDefault(); 
+            resetVenda(); 
+        }
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [cart, showClientModal, cpfInput]);
+  }, [cart, showClientModal, cpfInput, showPaymentModal]);
 
   const playBeep = (type: 'add' | 'success' | 'cancel' = 'add') => {
     try {
@@ -107,7 +120,19 @@ const PDV: React.FC = () => {
     }).filter(item => item.quantity > 0));
   };
 
+  const handleSelectPaymentMethod = (methodId: string) => {
+    if (methodId === 'DINHEIRO') {
+      setIsCashPayment(true);
+      setAmountReceived('');
+    } else {
+      handleFinishSale(methodId);
+    }
+  };
+
   const handleFinishSale = (method: string) => {
+    const cashValue = parseFloat(amountReceived) || total;
+    const change = Math.max(0, cashValue - total);
+
     const sale: Sale = {
       id: Math.random().toString(36).substring(7).toUpperCase(),
       items: [...cart],
@@ -119,7 +144,10 @@ const PDV: React.FC = () => {
       operatorId: user?.id || 'u1',
       operator: user?.name || 'Caixa 01',
       clientCpf: selectedClient?.cpf || cpfInput || '000.000.000-00',
-      clientName: selectedClient?.name || ''
+      clientName: selectedClient?.name || '',
+      // @ts-ignore (Adicionando campos extras para o recibo/histórico)
+      amountReceived: method === 'DINHEIRO' ? cashValue : total,
+      change: method === 'DINHEIRO' ? change : 0
     };
     
     setProducts(prev => prev.map(p => {
@@ -130,6 +158,8 @@ const PDV: React.FC = () => {
     setLastSale(sale);
     setSales(prev => [...prev, sale]);
     setShowPaymentModal(false);
+    setIsCashPayment(false);
+    setAmountReceived('');
     setShowReceipt(true);
     playBeep('success');
   };
@@ -141,6 +171,8 @@ const PDV: React.FC = () => {
     setLastSale(null);
     setSelectedClient(null);
     setCpfInput('');
+    setIsCashPayment(false);
+    setAmountReceived('');
   };
 
   const handleIdentifyCpf = () => {
@@ -161,7 +193,6 @@ const PDV: React.FC = () => {
     window.print();
   };
 
-  // Divide o timestamp em Data e Hora
   const getFormattedTime = (ts: string) => {
     const parts = ts.split(' ');
     return { date: parts[0], time: (parts[1] || '').substring(0, 5) };
@@ -169,7 +200,7 @@ const PDV: React.FC = () => {
 
   const renderReceiptText = (sale: any) => {
     const { date, time } = getFormattedTime(sale.timestamp);
-    return `      MERCEARIA DO CLAUDIO
+    let receipt = `      MERCEARIA DO CLAUDIO
      CNPJ: 00.000.000/0001-00
 --------------------------------
 CLIENTE: CPF: ${sale.clientCpf}
@@ -190,10 +221,20 @@ Desconto:           ${sale.discount.toFixed(2).padStart(8, ' ')}
 TOTAL:              ${sale.total.toFixed(2).padStart(8, ' ')}
 --------------------------------
 Pagamento: ${sale.paymentMethod}
---------------------------------
+`;
+
+    if (sale.paymentMethod === 'DINHEIRO') {
+        receipt += `Recebido:           ${sale.amountReceived.toFixed(2).padStart(8, ' ')}\n`;
+        receipt += `Troco:              ${sale.change.toFixed(2).padStart(8, ' ')}\n`;
+    }
+
+    receipt += `--------------------------------
 Obrigado pela preferência!
 --------------------------------`;
+    return receipt;
   };
+
+  const changeValue = Math.max(0, (parseFloat(amountReceived) || 0) - total);
 
   return (
     <div className="flex h-screen bg-[#f1f5f9] select-none">
@@ -470,25 +511,111 @@ Obrigado pela preferência!
       {showPaymentModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-sm no-print">
           <div className="bg-white rounded-[40px] w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col md:flex-row">
-            <div className="flex-1 p-8">
-              <h2 className="text-2xl font-black text-slate-800 mb-6 uppercase tracking-tighter">Meio de Pagamento</h2>
-              <div className="grid grid-cols-2 gap-3">
-                {PAYMENT_METHODS.map(m => (
-                  <button key={m.id} onClick={() => handleFinishSale(m.id)} className="flex items-center gap-3 p-5 rounded-2xl text-left border-2 border-slate-100 hover:border-blue-50 hover:bg-blue-50 transition-all group">
-                    <span className="text-2xl">{m.icon}</span>
-                    <span className="font-black text-slate-700 uppercase text-xs tracking-widest">{m.label}</span>
-                  </button>
-                ))}
+            {!isCashPayment ? (
+              <div className="flex-1 p-8">
+                <h2 className="text-2xl font-black text-slate-800 mb-6 uppercase tracking-tighter">Meio de Pagamento</h2>
+                <div className="grid grid-cols-2 gap-3">
+                  {PAYMENT_METHODS.map(m => (
+                    <button key={m.id} onClick={() => handleSelectPaymentMethod(m.id)} className="flex items-center gap-3 p-5 rounded-2xl text-left border-2 border-slate-100 hover:border-blue-50 hover:bg-blue-50 transition-all group active:scale-95">
+                      <span className="text-2xl">{m.icon}</span>
+                      <span className="font-black text-slate-700 uppercase text-xs tracking-widest">{m.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex-1 p-8">
+                <div className="flex items-center gap-3 mb-6">
+                  <button onClick={() => setIsCashPayment(false)} className="p-2 hover:bg-slate-100 rounded-xl text-slate-400">
+                    <ArrowLeft size={24} />
+                  </button>
+                  <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Pagamento em Dinheiro</h2>
+                </div>
+                
+                <div className="space-y-6">
+                   <div className="bg-slate-50 p-6 rounded-3xl border-2 border-slate-100">
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-2">Valor Recebido R$</label>
+                      <input 
+                        autoFocus
+                        type="number" 
+                        step="0.01"
+                        placeholder="0,00"
+                        className="w-full bg-transparent border-none text-4xl font-black text-blue-600 focus:ring-0 placeholder-slate-200 outline-none"
+                        value={amountReceived}
+                        onChange={(e) => setAmountReceived(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleFinishSale('DINHEIRO')}
+                      />
+                   </div>
+
+                   <div className="bg-orange-50 p-6 rounded-3xl border-2 border-orange-100 flex justify-between items-center">
+                      <div>
+                        <label className="text-xs font-black text-orange-400 uppercase tracking-widest block mb-1">Troco a Devolver</label>
+                        <span className="text-4xl font-black text-orange-600 tracking-tighter">
+                          R$ {changeValue.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="bg-orange-600/10 p-3 rounded-2xl text-orange-600 font-black text-xs uppercase tracking-widest">
+                        {changeValue > 0 ? 'Dar Troco' : 'Sem Troco'}
+                      </div>
+                   </div>
+
+                   <div className="grid grid-cols-3 gap-2">
+                      {[10, 20, 50, 100].map(val => (
+                        <button 
+                          key={val}
+                          onClick={() => setAmountReceived(val.toString())}
+                          className="py-4 bg-slate-100 text-slate-600 rounded-2xl font-black hover:bg-slate-200 transition-all active:scale-95"
+                        >
+                          R$ {val}
+                        </button>
+                      ))}
+                      <button 
+                        onClick={() => setAmountReceived(total.toString())}
+                        className="col-span-2 py-4 bg-blue-50 text-blue-600 rounded-2xl font-black hover:bg-blue-100 transition-all active:scale-95"
+                      >
+                        VALOR EXATO (R$ {total.toFixed(2)})
+                      </button>
+                   </div>
+                </div>
+                
+                <button 
+                  disabled={parseFloat(amountReceived) < total}
+                  onClick={() => handleFinishSale('DINHEIRO')}
+                  className="w-full mt-8 py-5 bg-blue-600 text-white rounded-[24px] font-black uppercase tracking-widest shadow-xl shadow-blue-900/20 disabled:opacity-30 disabled:shadow-none transition-all active:scale-95"
+                >
+                  FINALIZAR VENDA
+                </button>
+              </div>
+            )}
+
             <div className="w-full md:w-[240px] bg-blue-600 p-8 text-white flex flex-col justify-between">
               <div>
                 <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Total à Receber</span>
                 <div className="text-4xl font-black tracking-tighter mt-1">R$ {total.toFixed(2)}</div>
-                <div className="mt-4 text-[10px] font-black uppercase tracking-widest opacity-60">Consumidor</div>
-                <div className="text-sm font-bold truncate">{selectedClient?.name || (cpfInput.length > 0 ? cpfInput : 'Não identificado')}</div>
+                
+                <div className="mt-8">
+                  <div className="text-[10px] font-black uppercase tracking-widest opacity-60">Consumidor</div>
+                  <div className="text-sm font-bold truncate">{selectedClient?.name || (cpfInput.length > 0 ? cpfInput : 'Não identificado')}</div>
+                </div>
+
+                <div className="mt-4">
+                  <div className="text-[10px] font-black uppercase tracking-widest opacity-60">Itens</div>
+                  <div className="text-sm font-bold">{cart.reduce((a, b) => a + b.quantity, 0)} unidades</div>
+                </div>
               </div>
-              <button onClick={() => setShowPaymentModal(false)} className="w-full py-3 bg-white/10 hover:bg-white/20 rounded-xl font-black text-xs uppercase transition-all">Voltar</button>
+
+              {!isCashPayment ? (
+                <button 
+                  onClick={() => setShowPaymentModal(false)} 
+                  className="w-full py-4 bg-white/10 hover:bg-white/20 rounded-2xl font-black text-xs uppercase tracking-widest transition-all"
+                >
+                  CANCELAR (ESC)
+                </button>
+              ) : (
+                <div className="text-[10px] font-bold text-center opacity-50 uppercase tracking-widest leading-relaxed">
+                  Digite o valor recebido<br/>para calcular o troco
+                </div>
+              )}
             </div>
           </div>
         </div>
