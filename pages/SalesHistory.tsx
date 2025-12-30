@@ -19,36 +19,36 @@ const SalesHistory: React.FC = () => {
 
   const getFormattedTime = (ts: string) => {
     const parts = ts.split(' ');
-    // Adiciona a vírgula após a data como solicitado
     return { date: parts[0] + ',', time: (parts[1] || '').substring(0, 5) };
   };
 
   const renderReceiptText = (sale: any) => {
     const { date, time } = getFormattedTime(sale.timestamp);
+    const SEP = "--------------------------------";
     
-    let receipt = `      MERCEARIA DO CLAUDIO
-     CNPJ: 00.000.000/0001-00
---------------------------------
-CLIENTE: CPF: ${sale.clientCpf || '000.000.000-00'}
---------------------------------
-Data: ${date}  Hora: ${time}
-Operador: ${sale.operator}
---------------------------------
-Produto        Qtd   Valor
-`;
+    let receipt = `      MERCEARIA DO CLAUDIO\n`;
+    receipt += `     CNPJ: 00.000.000/0001-00\n`;
+    receipt += `${SEP}\n`;
+    receipt += `CLIENTE: CPF: ${sale.clientCpf || '000.000.000-00'}\n`;
+    receipt += `${SEP}\n`;
+    receipt += `Data: ${date}  Hora: ${time}\n`;
+    receipt += `Operador: ${sale.operator}\n`;
+    receipt += `${SEP}\n`;
+    
+    receipt += `Produto        Qtd   Valor\n`;
 
     sale.items.forEach((it: any) => {
-      const name = it.name.substring(0, 15).padEnd(15, ' ');
-      const qty = it.quantity.toString().padStart(4, ' ');
-      const val = (it.price * it.quantity).toFixed(2).padStart(8, ' ');
+      const name = it.name.substring(0, 14).padEnd(15, ' ');
+      const qty = it.quantity.toString().padStart(6, ' ');
+      const val = (it.price * it.quantity).toFixed(2).padStart(11, ' ');
       receipt += `${name}${qty}${val}\n`;
     });
 
-    receipt += `--------------------------------\n`;
-    receipt += `Subtotal:           ${sale.subtotal.toFixed(2).padStart(8, ' ')}\n`;
-    receipt += `Desconto:           ${sale.discount.toFixed(2).padStart(8, ' ')}\n`;
-    receipt += `TOTAL:              ${sale.total.toFixed(2).padStart(8, ' ')}\n`;
-    receipt += `--------------------------------\n`;
+    receipt += `${SEP}\n`;
+    receipt += `Subtotal:`.padEnd(15, ' ') + (sale.subtotal || 0).toFixed(2).padStart(17, ' ') + `\n`;
+    receipt += `Desconto:`.padEnd(15, ' ') + (sale.discount || 0).toFixed(2).padStart(17, ' ') + `\n`;
+    receipt += `TOTAL:`.padEnd(15, ' ') + (sale.total || 0).toFixed(2).padStart(17, ' ') + `\n`;
+    receipt += `${SEP}\n`;
 
     receipt += `Pagamento: ${sale.paymentMethod}\n`;
     if (sale.paymentMethod === 'DINHEIRO' && sale.amountReceived !== undefined) {
@@ -56,9 +56,10 @@ Produto        Qtd   Valor
         receipt += `Troco: ${sale.change.toFixed(2)}\n`;
     }
 
-    receipt += `--------------------------------
-Obrigado pela preferência!
---------------------------------`;
+    receipt += `${SEP}\n`;
+    receipt += `Obrigado pela preferência!\n`;
+    receipt += `${SEP}`;
+    
     return receipt;
   };
 
@@ -193,7 +194,8 @@ Obrigado pela preferência!
               fontSize: '12px', 
               lineHeight: '1.2',
               whiteSpace: 'pre-wrap',
-              margin: 0
+              margin: 0,
+              width: '100%'
             }}>
               {renderReceiptText(selectedSale)}
             </pre>

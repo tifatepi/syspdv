@@ -196,51 +196,55 @@ const PDV: React.FC = () => {
 
   const getFormattedTime = (ts: string) => {
     const parts = ts.split(' ');
-    // Adiciona a vírgula após a data como solicitado
     return { date: parts[0] + ',', time: (parts[1] || '').substring(0, 5) };
   };
 
   const renderReceiptText = (sale: any) => {
     const { date, time } = getFormattedTime(sale.timestamp);
+    const SEP = "--------------------------------";
     
-    // Header e Info Cliente
-    let receipt = `      MERCEARIA DO CLAUDIO
-     CNPJ: 00.000.000/0001-00
---------------------------------
-CLIENTE: CPF: ${sale.clientCpf}
---------------------------------
-Data: ${date}  Hora: ${time}
-Operador: ${sale.operator}
---------------------------------
-Produto        Qtd   Valor
-`;
+    // Header
+    let receipt = `      MERCEARIA DO CLAUDIO\n`;
+    receipt += `     CNPJ: 00.000.000/0001-00\n`;
+    receipt += `${SEP}\n`;
+    receipt += `CLIENTE: CPF: ${sale.clientCpf}\n`;
+    receipt += `${SEP}\n`;
+    receipt += `Data: ${date}  Hora: ${time}\n`;
+    receipt += `Operador: ${sale.operator}\n`;
+    receipt += `${SEP}\n`;
+    
+    // Table Header
+    // Produto (15) | Qtd (6) | Valor (11) = 32
+    receipt += `Produto        Qtd   Valor\n`;
 
-    // Itens
+    // Items
     sale.items.forEach((it: any) => {
-      const name = it.name.substring(0, 15).padEnd(15, ' ');
-      const qty = it.quantity.toString().padStart(4, ' ');
-      const val = (it.price * it.quantity).toFixed(2).padStart(8, ' ');
+      const name = it.name.substring(0, 14).padEnd(15, ' ');
+      const qty = it.quantity.toString().padStart(6, ' ');
+      const val = (it.price * it.quantity).toFixed(2).padStart(11, ' ');
       receipt += `${name}${qty}${val}\n`;
     });
 
-    receipt += `--------------------------------\n`;
+    receipt += `${SEP}\n`;
     
-    // Totais
-    receipt += `Subtotal:           ${sale.subtotal.toFixed(2).padStart(8, ' ')}\n`;
-    receipt += `Desconto:           ${sale.discount.toFixed(2).padStart(8, ' ')}\n`;
-    receipt += `TOTAL:              ${sale.total.toFixed(2).padStart(8, ' ')}\n`;
-    receipt += `--------------------------------\n`;
+    // Totals
+    // Label (15) | Value (17) = 32
+    receipt += `Subtotal:`.padEnd(15, ' ') + sale.subtotal.toFixed(2).padStart(17, ' ') + `\n`;
+    receipt += `Desconto:`.padEnd(15, ' ') + sale.discount.toFixed(2).padStart(17, ' ') + `\n`;
+    receipt += `TOTAL:`.padEnd(15, ' ') + sale.total.toFixed(2).padStart(17, ' ') + `\n`;
+    receipt += `${SEP}\n`;
 
-    // Pagamento
+    // Payment Info
     receipt += `Pagamento: ${sale.paymentMethod}\n`;
     if (sale.paymentMethod === 'DINHEIRO') {
         receipt += `Valor Recebido: ${sale.amountReceived.toFixed(2)}\n`;
         receipt += `Troco: ${sale.change.toFixed(2)}\n`;
     }
 
-    receipt += `--------------------------------
-Obrigado pela preferência!
---------------------------------`;
+    receipt += `${SEP}\n`;
+    receipt += `Obrigado pela preferência!\n`;
+    receipt += `${SEP}`;
+    
     return receipt;
   };
 
@@ -256,7 +260,8 @@ Obrigado pela preferência!
             fontSize: '12px', 
             lineHeight: '1.2',
             whiteSpace: 'pre-wrap',
-            margin: 0
+            margin: 0,
+            width: '100%'
           }}>
 {renderReceiptText(lastSale)}
           </pre>
@@ -633,7 +638,7 @@ Obrigado pela preferência!
 
       {showReceipt && lastSale && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-white p-6 no-print overflow-y-auto">
-          <div className="flex flex-col items-center gap-6 max-sm w-full text-center">
+          <div className="flex flex-col items-center gap-6 max-w-sm w-full text-center">
              <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center animate-bounce">
                 {ICONS.Finish}
              </div>
