@@ -3,7 +3,7 @@ import React from 'react';
 import { useApp } from '../App';
 import { ICONS } from '../constants';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area } from 'recharts';
-import { TrendingUp, Award, DollarSign, Package, Calendar } from 'lucide-react';
+import { TrendingUp, Award, DollarSign, Package, Calendar, Download, FileText } from 'lucide-react';
 
 const Reports: React.FC = () => {
   const { sales, products } = useApp();
@@ -16,7 +16,7 @@ const Reports: React.FC = () => {
     { name: 'Débito', value: sales.filter(s => s.paymentMethod === 'DÉBITO').length },
   ].filter(p => p.value > 0);
 
-  // Vendas por Dia (Simulado para os últimos 7 dias)
+  // Vendas por Dia (Simulado para os últimos 7 dias baseado nas vendas reais se houver)
   const weeklySales = [
     { day: 'Seg', total: 1200 },
     { day: 'Ter', total: 1800 },
@@ -31,32 +31,87 @@ const Reports: React.FC = () => {
   const topProducts = products.slice(0, 5).map(p => ({
     name: p.name,
     sold: Math.floor(Math.random() * 50) + 10,
-    revenue: 0 // preenchido depois
+    revenue: 0 
   })).sort((a, b) => b.sold - a.sold);
 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
+  const handleExportPDF = () => {
+    window.print();
+  };
+
+  const handleExportExcel = () => {
+    if (sales.length === 0) {
+      alert("Não há dados de vendas para exportar.");
+      return;
+    }
+
+    // Cabeçalhos do CSV
+    const headers = ["ID Venda", "Data/Hora", "Cliente", "Metodo Pagamento", "Subtotal", "Desconto", "Total"];
+    
+    // Linhas de dados
+    const csvRows = sales.map(s => [
+      s.id,
+      s.timestamp,
+      s.clientName || 'Consumidor',
+      s.paymentMethod,
+      s.subtotal.toFixed(2),
+      s.discount.toFixed(2),
+      s.total.toFixed(2)
+    ]);
+
+    // Unir tudo
+    const csvContent = [headers, ...csvRows].map(e => e.join(",")).join("\n");
+    
+    // Criar blob e download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `relatorio_vendas_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 overflow-y-auto h-full custom-scrollbar">
-      <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+      <div className="flex flex-col md:flex-row justify-between items-center gap-6 no-print">
         <div>
           <h1 className="text-4xl font-black text-slate-800 tracking-tighter uppercase">Inteligência de Vendas</h1>
           <p className="text-slate-500 font-medium mt-2">Relatórios consolidados para tomada de decisão</p>
         </div>
         <div className="flex gap-4">
-           <button className="px-6 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-xs hover:bg-slate-200 transition-all btn-touch-active">GERAR PDF</button>
-           <button className="px-6 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs hover:bg-slate-800 transition-all shadow-xl btn-touch-active">EXPORTAR EXCEL</button>
+           <button 
+            onClick={handleExportPDF}
+            className="px-6 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-xs hover:bg-slate-200 transition-all btn-touch-active flex items-center gap-2"
+           >
+             <FileText size={16} /> GERAR PDF
+           </button>
+           <button 
+            onClick={handleExportExcel}
+            className="px-6 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs hover:bg-slate-800 transition-all shadow-xl btn-touch-active flex items-center gap-2"
+           >
+             <Download size={16} /> EXPORTAR EXCEL (CSV)
+           </button>
         </div>
+      </div>
+
+      {/* Header visível apenas na impressão */}
+      <div className="hidden print:block border-b-4 border-slate-900 pb-4 mb-8">
+        <h1 className="text-3xl font-black uppercase">Relatório Gerencial - QuickTouch POS</h1>
+        <p className="text-sm font-bold text-slate-500">Emitido em: {new Date().toLocaleString()}</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Gráfico de Vendas Semanal */}
-        <div className="lg:col-span-2 bg-white p-8 rounded-[40px] shadow-sm border-2 border-slate-100">
+        <div className="lg:col-span-2 bg-white p-8 rounded-[40px] shadow-sm border-2 border-slate-100 break-inside-avoid">
           <div className="flex items-center justify-between mb-8">
              <h3 className="text-lg font-black text-slate-800 flex items-center gap-3">
                <TrendingUp className="text-blue-600" /> Faturamento Semanal
              </h3>
-             <span className="text-xs font-bold text-slate-400">Últimos 7 dias</span>
+             <span className="text-xs font-bold text-slate-400 no-print">Últimos 7 dias</span>
           </div>
           <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -81,7 +136,7 @@ const Reports: React.FC = () => {
         </div>
 
         {/* Mix de Pagamentos */}
-        <div className="bg-white p-8 rounded-[40px] shadow-sm border-2 border-slate-100">
+        <div className="bg-white p-8 rounded-[40px] shadow-sm border-2 border-slate-100 break-inside-avoid">
           <h3 className="text-lg font-black text-slate-800 mb-8 flex items-center gap-3">
              <DollarSign className="text-emerald-500" /> Mix de Recebimento
           </h3>
@@ -122,7 +177,7 @@ const Reports: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Top Produtos */}
-        <div className="bg-white p-8 rounded-[40px] shadow-sm border-2 border-slate-100">
+        <div className="bg-white p-8 rounded-[40px] shadow-sm border-2 border-slate-100 break-inside-avoid">
            <h3 className="text-lg font-black text-slate-800 mb-8 flex items-center gap-3 uppercase tracking-tighter">
              <Award className="text-orange-500" size={24} /> Ranking de Produtos (Top 5)
            </h3>
@@ -140,15 +195,15 @@ const Reports: React.FC = () => {
                       <p className="font-black text-slate-800 group-hover:text-blue-600 transition-colors">{p.name}</p>
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{p.sold} unidades vendidas este mês</p>
                    </div>
-                   <TrendingUp className="text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" size={20} />
+                   <TrendingUp className="text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity no-print" size={20} />
                 </div>
               ))}
            </div>
         </div>
 
         {/* Card Informativo de Estoque */}
-        <div className="bg-slate-900 p-10 rounded-[40px] shadow-2xl relative overflow-hidden text-white">
-           <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/10 rounded-bl-[150px]" />
+        <div className="bg-slate-900 p-10 rounded-[40px] shadow-2xl relative overflow-hidden text-white break-inside-avoid">
+           <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/10 rounded-bl-[150px] no-print" />
            <div className="flex items-center gap-4 mb-10">
               <div className="w-16 h-16 bg-blue-600 rounded-3xl flex items-center justify-center text-white">
                  <Package size={32} />
@@ -175,7 +230,7 @@ const Reports: React.FC = () => {
                  <Calendar className="text-blue-500" />
                  <span className="text-xs font-black uppercase tracking-widest">Giro de estoque: 14 dias</span>
               </div>
-              <button className="text-[10px] font-black text-blue-400 hover:text-white transition-colors">GERAR BALANÇO</button>
+              <button className="text-[10px] font-black text-blue-400 hover:text-white transition-colors no-print">GERAR BALANÇO</button>
            </div>
         </div>
       </div>

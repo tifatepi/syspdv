@@ -7,43 +7,45 @@
     <title>QuickTouch POS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-      /* Estilos de Impressão (Impressora Térmica 80mm) */
+      /* Estilos de Impressão */
       @media print {
-        @page {
-          margin: 0;
-          size: 80mm auto;
+        /* Se for o cupom fiscal (identificado pela classe print-content no PDV) */
+        .print-content {
+          width: 80mm !important;
+          margin: 0 !important;
+          padding: 5mm !important;
         }
-        
-        /* Oculta elementos que não devem sair no papel */
+
+        /* Se for um relatório geral (identificado por não ser print-content) */
+        body:not(:has(.print-content)) {
+          width: 210mm; /* A4 width */
+          height: auto;
+          background: white !important;
+          padding: 10mm;
+        }
+
         .no-print, .no-print * { 
           display: none !important; 
         }
         
-        /* Garante que o container de impressão apareça */
         .print-only { 
           display: block !important; 
         }
         
-        body { 
-          width: 80mm; 
-          margin: 0; 
-          padding: 0; 
-          background-color: white !important;
-          color: black !important;
-          font-family: 'Courier New', Courier, monospace;
-        }
-
-        /* Corrigido: Não podemos esconder o #root pois o React está dentro dele */
         #root { 
           display: block !important; 
         }
 
-        /* Ajustes finos para garantir que o recibo ocupe a largura correta */
-        .print-content {
-          display: block !important;
-          width: 80mm !important;
-          padding: 10px !important;
-          box-sizing: border-box !important;
+        /* Forçar cores na impressão */
+        * {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+
+        /* Evitar quebra de cards ao meio */
+        .break-inside-avoid {
+          page-break-inside: avoid;
+          break-inside: avoid;
         }
       }
 
