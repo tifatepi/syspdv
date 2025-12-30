@@ -143,10 +143,11 @@ const PDV: React.FC = () => {
       timestamp: new Date().toLocaleString('pt-BR'),
       operatorId: user?.id || 'u1',
       operator: user?.name || 'Caixa 01',
-      clientCpf: selectedClient?.cpf || cpfInput || '000.000.000-00',
+      clientCpf: selectedClient?.cpf || (cpfInput.length > 0 ? cpfInput : 'N/I'),
       clientName: selectedClient?.name || '',
-      // @ts-ignore (Adicionando campos extras para o recibo/histórico)
+      // @ts-ignore
       amountReceived: method === 'DINHEIRO' ? cashValue : total,
+      // @ts-ignore
       change: method === 'DINHEIRO' ? change : 0
     };
     
@@ -195,11 +196,14 @@ const PDV: React.FC = () => {
 
   const getFormattedTime = (ts: string) => {
     const parts = ts.split(' ');
-    return { date: parts[0], time: (parts[1] || '').substring(0, 5) };
+    // Adiciona a vírgula após a data como solicitado
+    return { date: parts[0] + ',', time: (parts[1] || '').substring(0, 5) };
   };
 
   const renderReceiptText = (sale: any) => {
     const { date, time } = getFormattedTime(sale.timestamp);
+    
+    // Header e Info Cliente
     let receipt = `      MERCEARIA DO CLAUDIO
      CNPJ: 00.000.000/0001-00
 --------------------------------
@@ -209,23 +213,29 @@ Data: ${date}  Hora: ${time}
 Operador: ${sale.operator}
 --------------------------------
 Produto        Qtd   Valor
-${sale.items.map((it: any) => {
-  const name = it.name.substring(0, 15).padEnd(15, ' ');
-  const qty = it.quantity.toString().padStart(4, ' ');
-  const val = (it.price * it.quantity).toFixed(2).padStart(8, ' ');
-  return `${name}${qty}${val}`;
-}).join('\n')}
---------------------------------
-Subtotal:           ${sale.subtotal.toFixed(2).padStart(8, ' ')}
-Desconto:           ${sale.discount.toFixed(2).padStart(8, ' ')}
-TOTAL:              ${sale.total.toFixed(2).padStart(8, ' ')}
---------------------------------
-Pagamento: ${sale.paymentMethod}
 `;
 
+    // Itens
+    sale.items.forEach((it: any) => {
+      const name = it.name.substring(0, 15).padEnd(15, ' ');
+      const qty = it.quantity.toString().padStart(4, ' ');
+      const val = (it.price * it.quantity).toFixed(2).padStart(8, ' ');
+      receipt += `${name}${qty}${val}\n`;
+    });
+
+    receipt += `--------------------------------\n`;
+    
+    // Totais
+    receipt += `Subtotal:           ${sale.subtotal.toFixed(2).padStart(8, ' ')}\n`;
+    receipt += `Desconto:           ${sale.discount.toFixed(2).padStart(8, ' ')}\n`;
+    receipt += `TOTAL:              ${sale.total.toFixed(2).padStart(8, ' ')}\n`;
+    receipt += `--------------------------------\n`;
+
+    // Pagamento
+    receipt += `Pagamento: ${sale.paymentMethod}\n`;
     if (sale.paymentMethod === 'DINHEIRO') {
-        receipt += `Recebido:           ${sale.amountReceived.toFixed(2).padStart(8, ' ')}\n`;
-        receipt += `Troco:              ${sale.change.toFixed(2).padStart(8, ' ')}\n`;
+        receipt += `Valor Recebido: ${sale.amountReceived.toFixed(2)}\n`;
+        receipt += `Troco: ${sale.change.toFixed(2)}\n`;
     }
 
     receipt += `--------------------------------
@@ -623,7 +633,7 @@ Obrigado pela preferência!
 
       {showReceipt && lastSale && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-white p-6 no-print overflow-y-auto">
-          <div className="flex flex-col items-center gap-6 max-w-sm w-full text-center">
+          <div className="flex flex-col items-center gap-6 max-sm w-full text-center">
              <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center animate-bounce">
                 {ICONS.Finish}
              </div>

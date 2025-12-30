@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../App';
 import { ICONS, PAYMENT_METHODS } from '../constants';
@@ -18,35 +19,47 @@ const SalesHistory: React.FC = () => {
 
   const getFormattedTime = (ts: string) => {
     const parts = ts.split(' ');
-    return { date: parts[0], time: (parts[1] || '').substring(0, 5) };
+    // Adiciona a vírgula após a data como solicitado
+    return { date: parts[0] + ',', time: (parts[1] || '').substring(0, 5) };
   };
 
   const renderReceiptText = (sale: any) => {
     const { date, time } = getFormattedTime(sale.timestamp);
-    return `      MERCEARIA DO CLAUDIO
+    
+    let receipt = `      MERCEARIA DO CLAUDIO
      CNPJ: 00.000.000/0001-00
 --------------------------------
-CLIENTE: CPF: ${sale.clientCpf}
+CLIENTE: CPF: ${sale.clientCpf || '000.000.000-00'}
 --------------------------------
 Data: ${date}  Hora: ${time}
 Operador: ${sale.operator}
 --------------------------------
 Produto        Qtd   Valor
-${sale.items.map((it: any) => {
-  const name = it.name.substring(0, 15).padEnd(15, ' ');
-  const qty = it.quantity.toString().padStart(4, ' ');
-  const val = (it.price * it.quantity).toFixed(2).padStart(8, ' ');
-  return `${name}${qty}${val}`;
-}).join('\n')}
---------------------------------
-Subtotal:           ${sale.subtotal.toFixed(2).padStart(8, ' ')}
-Desconto:           ${sale.discount.toFixed(2).padStart(8, ' ')}
-TOTAL:              ${sale.total.toFixed(2).padStart(8, ' ')}
---------------------------------
-Pagamento: ${sale.paymentMethod}
---------------------------------
+`;
+
+    sale.items.forEach((it: any) => {
+      const name = it.name.substring(0, 15).padEnd(15, ' ');
+      const qty = it.quantity.toString().padStart(4, ' ');
+      const val = (it.price * it.quantity).toFixed(2).padStart(8, ' ');
+      receipt += `${name}${qty}${val}\n`;
+    });
+
+    receipt += `--------------------------------\n`;
+    receipt += `Subtotal:           ${sale.subtotal.toFixed(2).padStart(8, ' ')}\n`;
+    receipt += `Desconto:           ${sale.discount.toFixed(2).padStart(8, ' ')}\n`;
+    receipt += `TOTAL:              ${sale.total.toFixed(2).padStart(8, ' ')}\n`;
+    receipt += `--------------------------------\n`;
+
+    receipt += `Pagamento: ${sale.paymentMethod}\n`;
+    if (sale.paymentMethod === 'DINHEIRO' && sale.amountReceived !== undefined) {
+        receipt += `Valor Recebido: ${sale.amountReceived.toFixed(2)}\n`;
+        receipt += `Troco: ${sale.change.toFixed(2)}\n`;
+    }
+
+    receipt += `--------------------------------
 Obrigado pela preferência!
 --------------------------------`;
+    return receipt;
   };
 
   const handlePrint = () => {
@@ -127,7 +140,6 @@ Obrigado pela preferência!
               {filteredSales.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-10 py-20 text-center opacity-30">
-                    {/* Fixed: Use React.cloneElement for ICONS.PDV as it is an element, not a component */}
                     {React.cloneElement(ICONS.PDV as React.ReactElement<any>, { size: 60, className: "mx-auto mb-4" })}
                     <p className="font-black uppercase tracking-widest">Nenhuma venda encontrada</p>
                   </td>
@@ -159,9 +171,6 @@ Obrigado pela preferência!
                <div className="flex w-full gap-4">
                   <button 
                     onClick={() => {
-                      // Para imprimir apenas este recibo, precisamos que ele esteja visível na div de impressão.
-                      // Como o handlePrint do PDV já usa window.print(), o CSS @media print cuidará de esconder o resto.
-                      // Mas no histórico, precisamos que o SELECTED SALE esteja renderizado na div .print-only
                       handlePrint();
                     }} 
                     className="flex-1 py-5 bg-slate-900 text-white rounded-[24px] font-black uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-transform"
@@ -178,7 +187,6 @@ Obrigado pela preferência!
             </div>
           </div>
 
-          {/* Div oculta para impressão (necessária para window.print pegar o conteúdo correto) */}
           <div className="print-only print-content">
             <pre style={{ 
               fontFamily: 'monospace', 
