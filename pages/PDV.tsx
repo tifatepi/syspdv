@@ -118,7 +118,7 @@ const PDV: React.FC = () => {
       timestamp: new Date().toLocaleString('pt-BR'),
       operatorId: user?.id || 'u1',
       operator: user?.name || 'Caixa 01',
-      clientCpf: selectedClient?.cpf || cpfInput || 'CONSUMIDOR',
+      clientCpf: selectedClient?.cpf || cpfInput || '000.000.000-00',
       clientName: selectedClient?.name || ''
     };
     
@@ -164,7 +164,35 @@ const PDV: React.FC = () => {
   // Divide o timestamp em Data e Hora
   const getFormattedTime = (ts: string) => {
     const parts = ts.split(' ');
-    return { date: parts[0], time: parts[1] || '' };
+    return { date: parts[0], time: (parts[1] || '').substring(0, 5) };
+  };
+
+  const renderReceiptText = (sale: any) => {
+    const { date, time } = getFormattedTime(sale.timestamp);
+    return `      MERCEARIA DO CLAUDIO
+     CNPJ: 00.000.000/0001-00
+--------------------------------
+CLIENTE: CPF: ${sale.clientCpf}
+--------------------------------
+Data: ${date}  Hora: ${time}
+Operador: ${sale.operator}
+--------------------------------
+Produto        Qtd   Valor
+${sale.items.map((it: any) => {
+  const name = it.name.substring(0, 15).padEnd(15, ' ');
+  const qty = it.quantity.toString().padStart(4, ' ');
+  const val = (it.price * it.quantity).toFixed(2).padStart(8, ' ');
+  return `${name}${qty}${val}`;
+}).join('\n')}
+--------------------------------
+Subtotal:           ${sale.subtotal.toFixed(2).padStart(8, ' ')}
+Desconto:           ${sale.discount.toFixed(2).padStart(8, ' ')}
+TOTAL:              ${sale.total.toFixed(2).padStart(8, ' ')}
+--------------------------------
+Pagamento: ${sale.paymentMethod}
+--------------------------------
+Obrigado pela preferência!
+--------------------------------`;
   };
 
   return (
@@ -179,28 +207,7 @@ const PDV: React.FC = () => {
             whiteSpace: 'pre-wrap',
             margin: 0
           }}>
-{`      MERCEARIA DO CLAUDIO
-     CNPJ: 00.000.000/0001-00
---------------------------------
-Data: ${getFormattedTime(lastSale.timestamp).date}  Hora: ${getFormattedTime(lastSale.timestamp).time}
-Operador: ${lastSale.operator}
---------------------------------
-Produto        Qtd   Valor
-${lastSale.items.map((it: any) => {
-  const name = it.name.substring(0, 15).padEnd(15, ' ');
-  const qty = it.quantity.toString().padStart(4, ' ');
-  const val = (it.price * it.quantity).toFixed(2).padStart(8, ' ');
-  return `${name}${qty}${val}`;
-}).join('\n')}
---------------------------------
-Subtotal:           ${lastSale.subtotal.toFixed(2).padStart(8, ' ')}
-Desconto:           ${lastSale.discount.toFixed(2).padStart(8, ' ')}
-TOTAL:              ${lastSale.total.toFixed(2).padStart(8, ' ')}
---------------------------------
-Pagamento: ${lastSale.paymentMethod}
---------------------------------
-Obrigado pela preferência!
---------------------------------`}
+{renderReceiptText(lastSale)}
           </pre>
           <div style={{ height: '50px' }}></div>
         </div>
@@ -325,7 +332,7 @@ Obrigado pela preferência!
         </div>
 
         <div className="px-5 py-3 border-t bg-blue-50/50">
-           {selectedClient || cpfInput ? (
+           {selectedClient || (cpfInput && cpfInput.length > 0) ? (
              <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-blue-200 shadow-sm">
                 <div className="flex items-center gap-3">
                   <UserCheck className="text-blue-600" size={20} />
@@ -479,7 +486,7 @@ Obrigado pela preferência!
                 <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Total à Receber</span>
                 <div className="text-4xl font-black tracking-tighter mt-1">R$ {total.toFixed(2)}</div>
                 <div className="mt-4 text-[10px] font-black uppercase tracking-widest opacity-60">Consumidor</div>
-                <div className="text-sm font-bold truncate">{selectedClient?.name || cpfInput || 'Não identificado'}</div>
+                <div className="text-sm font-bold truncate">{selectedClient?.name || (cpfInput.length > 0 ? cpfInput : 'Não identificado')}</div>
               </div>
               <button onClick={() => setShowPaymentModal(false)} className="w-full py-3 bg-white/10 hover:bg-white/20 rounded-xl font-black text-xs uppercase transition-all">Voltar</button>
             </div>
@@ -498,28 +505,7 @@ Obrigado pela preferência!
              {/* Simulação Visual do Recibo na tela */}
              <div className="bg-slate-50 p-6 rounded-2xl w-full font-mono text-left text-[11px] border border-dashed border-slate-300 shadow-inner overflow-hidden">
                 <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
-{`      MERCEARIA DO CLAUDIO
-     CNPJ: 00.000.000/0001-00
---------------------------------
-Data: ${getFormattedTime(lastSale.timestamp).date}  Hora: ${getFormattedTime(lastSale.timestamp).time}
-Operador: ${lastSale.operator}
---------------------------------
-Produto        Qtd   Valor
-${lastSale.items.map((it: any) => {
-  const name = it.name.substring(0, 15).padEnd(15, ' ');
-  const qty = it.quantity.toString().padStart(4, ' ');
-  const val = (it.price * it.quantity).toFixed(2).padStart(8, ' ');
-  return `${name}${qty}${val}`;
-}).join('\n')}
---------------------------------
-Subtotal:           ${lastSale.subtotal.toFixed(2).padStart(8, ' ')}
-Desconto:           ${lastSale.discount.toFixed(2).padStart(8, ' ')}
-TOTAL:              ${lastSale.total.toFixed(2).padStart(8, ' ')}
---------------------------------
-Pagamento: ${lastSale.paymentMethod}
---------------------------------
-Obrigado pela preferência!
---------------------------------`}
+{renderReceiptText(lastSale)}
                 </pre>
              </div>
 

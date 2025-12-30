@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { HashRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { User, UserRole, Product, Sale, Transaction, Supplier, Client } from './types';
@@ -40,6 +39,7 @@ import Reports from './pages/Reports';
 import Suppliers from './pages/Suppliers';
 import Clients from './pages/Clients';
 import Login from './pages/Login';
+import SalesHistory from './pages/SalesHistory';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, setUser } = useApp();
@@ -65,6 +65,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           <nav className="flex-1 py-4 overflow-y-auto custom-scrollbar">
             <NavLink to="/dashboard" icon={ICONS.Dashboard} label="Dashboard" active={location.pathname === '/dashboard'} />
             <NavLink to="/pdv" icon={ICONS.PDV} label="Venda (PDV)" active={location.pathname === '/pdv'} />
+            {/* Fixed: Use React.cloneElement for ICONS.Clock as it is an element, not a component */}
+            <NavLink to="/sales" icon={<div className="flex items-center justify-center w-6 h-6">{React.cloneElement(ICONS.Clock as React.ReactElement<any>, { size: 20 })}</div>} label="Histórico Vendas" active={location.pathname === '/sales'} />
             <NavLink to="/products" icon={ICONS.Products} label="Produtos" active={location.pathname === '/products'} />
             <NavLink to="/clients" icon={ICONS.User} label="Clientes" active={location.pathname === '/clients'} />
             <NavLink to="/suppliers" icon={ICONS.Suppliers} label="Fornecedores" active={location.pathname === '/suppliers'} />
@@ -86,7 +88,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         {!isPDV && (
           <header className="h-14 bg-white border-b flex items-center justify-between px-6 z-10 no-print shadow-sm shrink-0">
             <h2 className="font-black text-slate-800 text-base uppercase tracking-widest">
-              {location.pathname.substring(1)}
+              {location.pathname === '/sales' ? 'Histórico de Vendas' : location.pathname.substring(1)}
             </h2>
             <div className="flex items-center gap-4">
               <div className="text-slate-400 font-bold text-sm uppercase tracking-tighter">{time}</div>
@@ -114,7 +116,7 @@ const NavLink = ({ to, icon, label, active }: { to: string, icon: any, label: st
       : 'text-slate-400 hover:text-white hover:bg-slate-800'
     }`}
   >
-    <div className={active ? 'scale-110' : ''}>{React.cloneElement(icon as React.ReactElement<any>, { size: 20 })}</div>
+    <div className={active ? 'scale-110' : ''}>{React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<any>, { size: 20 }) : icon}</div>
     <span className="font-bold text-sm">{label}</span>
   </Link>
 );
@@ -148,6 +150,7 @@ const App: React.FC = () => {
           <Route path="/" element={<Navigate to="/dashboard" />} />
           <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
           <Route path="/pdv" element={<Layout><PDV /></Layout>} />
+          <Route path="/sales" element={<Layout><SalesHistory /></Layout>} />
           <Route path="/products" element={<Layout><Products /></Layout>} />
           <Route path="/clients" element={<Layout><Clients /></Layout>} />
           <Route path="/suppliers" element={<Layout><Suppliers /></Layout>} />
