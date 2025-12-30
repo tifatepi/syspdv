@@ -28,7 +28,8 @@ export interface Product {
   stock: number;
   minStock: number;
   category: string;
-  expiryDate?: string;
+  expiryDate?: string; // Mantido opcional para flexibilidade, mas usado nos alertas
+  batch?: string;      // Campo de Lote
 }
 
 export interface CartItem extends Product {
@@ -54,7 +55,7 @@ export interface Sale {
   timestamp: string;
   operatorId: string;
   operator: string;
-  clientCpf?: string; // CPF do consumidor para o recibo
+  clientCpf?: string;
   clientName?: string;
 }
 

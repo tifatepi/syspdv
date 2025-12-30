@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useApp } from '../App';
 import { Product } from '../types';
 import { ICONS } from '../constants';
-import { Tag, Plus, Trash2, X } from 'lucide-react';
+import { Tag, Plus, Trash2, X, Calendar, Package } from 'lucide-react';
 
 const Products: React.FC = () => {
   const { products, setProducts, categories, setCategories } = useApp();
@@ -23,6 +23,20 @@ const Products: React.FC = () => {
     if (confirm('Deseja excluir permanentemente este produto do catálogo?')) {
       setProducts(prev => prev.filter(p => p.id !== id));
     }
+  };
+
+  const getExpiryStatus = (dateStr?: string) => {
+    if (!dateStr) return null;
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const expiry = new Date(dateStr);
+    expiry.setHours(0,0,0,0);
+    const diff = expiry.getTime() - today.getTime();
+    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+
+    if (days <= 0) return { label: 'VENCIDO', color: 'bg-red-500 text-white' };
+    if (days <= 10) return { label: `${days} DIAS`, color: 'bg-orange-500 text-white' };
+    return { label: 'OK', color: 'bg-green-100 text-green-700' };
   };
 
   const handleAddCategory = () => {
@@ -58,6 +72,8 @@ const Products: React.FC = () => {
       stock: parseInt(formData.get('stock') as string),
       minStock: parseInt(formData.get('minStock') as string),
       category: formData.get('category') as string,
+      expiryDate: formData.get('expiryDate') as string,
+      batch: formData.get('batch') as string,
     };
 
     if (editingProduct) {
@@ -78,8 +94,8 @@ const Products: React.FC = () => {
     <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 overflow-y-auto h-full custom-scrollbar">
       <div className="flex flex-col md:flex-row justify-between items-center gap-6">
         <div>
-          <h1 className="text-4xl font-black text-slate-800 tracking-tighter">Catálogo de Produtos</h1>
-          <p className="text-slate-500 font-medium mt-2">Gerenciamento completo de preços, estoque e validade</p>
+          <h1 className="text-4xl font-black text-slate-800 tracking-tighter uppercase">Estoque & Produtos</h1>
+          <p className="text-slate-500 font-medium mt-2">Gerenciamento de lotes, validade e reposição</p>
         </div>
         <div className="flex gap-4 w-full md:w-auto">
           <button 
@@ -117,56 +133,72 @@ const Products: React.FC = () => {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50 border-b-2 border-slate-100">
-                <th className="px-10 py-6 text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Item</th>
-                <th className="px-10 py-6 text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Preço Final</th>
+                <th className="px-10 py-6 text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Item / Lote</th>
+                <th className="px-10 py-6 text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Validade</th>
+                <th className="px-10 py-6 text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Preço</th>
                 <th className="px-10 py-6 text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Estoque</th>
-                <th className="px-10 py-6 text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Categoria</th>
                 <th className="px-10 py-6 text-xs font-black text-slate-400 uppercase tracking-[0.2em] text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y-2 divide-slate-50">
-              {filtered.map(product => (
-                <tr key={product.id} className="hover:bg-slate-50/50 transition-colors group">
-                  <td className="px-10 py-8">
-                    <div className="flex flex-col">
-                      <span className="font-black text-slate-800 text-xl leading-none mb-1 group-hover:text-blue-600 transition-colors">{product.name}</span>
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{product.sku} | {product.barcode}</span>
-                    </div>
-                  </td>
-                  <td className="px-10 py-8">
-                    <span className="text-2xl font-black text-blue-600">R$ {product.price.toFixed(2)}</span>
-                  </td>
-                  <td className="px-10 py-8">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-3 h-3 rounded-full ${product.stock <= product.minStock ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`} />
-                      <span className={`px-4 py-2 rounded-xl text-sm font-black shadow-inner ${
-                        product.stock <= product.minStock ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-600'
-                      }`}>
-                        {product.stock} UN
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-10 py-8">
-                     <span className="px-4 py-2 bg-blue-50 text-blue-500 rounded-xl text-xs font-black uppercase tracking-widest">{product.category}</span>
-                  </td>
-                  <td className="px-10 py-8 text-right">
-                    <div className="flex justify-end gap-3 md:opacity-0 group-hover:opacity-100 transition-all">
-                      <button 
-                        onClick={() => { setEditingProduct(product); setIsModalOpen(true); }}
-                        className="w-12 h-12 bg-slate-100 text-slate-500 hover:bg-blue-600 hover:text-white rounded-xl flex items-center justify-center transition-all shadow-sm"
-                      >
-                        {React.cloneElement(ICONS.Settings as React.ReactElement<any>, { size: 20 })}
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(product.id)}
-                        className="w-12 h-12 bg-slate-100 text-slate-500 hover:bg-red-500 hover:text-white rounded-xl flex items-center justify-center transition-all shadow-sm"
-                      >
-                        {React.cloneElement(ICONS.Trash as React.ReactElement<any>, { size: 20 })}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {filtered.map(product => {
+                const expiry = getExpiryStatus(product.expiryDate);
+                return (
+                  <tr key={product.id} className="hover:bg-slate-50/50 transition-colors group">
+                    <td className="px-10 py-8">
+                      <div className="flex flex-col">
+                        <span className="font-black text-slate-800 text-xl leading-none mb-1 group-hover:text-blue-600 transition-colors">{product.name}</span>
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                           Lote: {product.batch || 'N/I'} | {product.sku}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-10 py-8">
+                      {expiry ? (
+                        <div className="flex flex-col gap-1">
+                          <span className={`px-3 py-1 rounded-lg text-[10px] font-black w-fit uppercase ${expiry.color}`}>
+                            {expiry.label}
+                          </span>
+                          <span className="text-xs font-bold text-slate-400">
+                            {new Date(product.expiryDate!).toLocaleDateString()}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-slate-300 font-bold text-xs uppercase">N/I</span>
+                      )}
+                    </td>
+                    <td className="px-10 py-8">
+                      <span className="text-2xl font-black text-blue-600">R$ {product.price.toFixed(2)}</span>
+                    </td>
+                    <td className="px-10 py-8">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-3 h-3 rounded-full ${product.stock <= product.minStock ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`} />
+                        <span className={`px-4 py-2 rounded-xl text-sm font-black shadow-inner ${
+                          product.stock <= product.minStock ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-600'
+                        }`}>
+                          {product.stock} UN
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-10 py-8 text-right">
+                      <div className="flex justify-end gap-3 md:opacity-0 group-hover:opacity-100 transition-all">
+                        <button 
+                          onClick={() => { setEditingProduct(product); setIsModalOpen(true); }}
+                          className="w-12 h-12 bg-slate-100 text-slate-500 hover:bg-blue-600 hover:text-white rounded-xl flex items-center justify-center transition-all shadow-sm"
+                        >
+                          {React.cloneElement(ICONS.Settings as React.ReactElement<any>, { size: 20 })}
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(product.id)}
+                          className="w-12 h-12 bg-slate-100 text-slate-500 hover:bg-red-500 hover:text-white rounded-xl flex items-center justify-center transition-all shadow-sm"
+                        >
+                          {React.cloneElement(ICONS.Trash as React.ReactElement<any>, { size: 20 })}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -226,9 +258,9 @@ const Products: React.FC = () => {
       {/* Modal Produto */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md">
-          <form onSubmit={handleSave} className="bg-white rounded-[40px] w-full max-w-3xl p-12 shadow-2xl animate-in zoom-in-95 duration-200">
+          <form onSubmit={handleSave} className="bg-white rounded-[40px] w-full max-w-4xl p-12 shadow-2xl animate-in zoom-in-95 duration-200 overflow-y-auto max-h-[90vh] custom-scrollbar">
             <h2 className="text-3xl font-black text-slate-800 mb-10 flex items-center gap-4">
-               <div className="p-3 bg-blue-100 text-blue-600 rounded-2xl">{ICONS.Products}</div>
+               <div className="p-3 bg-blue-100 text-blue-600 rounded-2xl"><Package size={24} /></div>
                {editingProduct ? 'Editar Informações' : 'Cadastrar Novo Item'}
             </h2>
             <div className="space-y-8">
@@ -257,6 +289,22 @@ const Products: React.FC = () => {
                   <select name="category" defaultValue={editingProduct?.category} className="h-16 p-5 bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl outline-none font-bold text-lg transition-all appearance-none">
                     {categories.filter(c => c !== 'Todos').map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
+                </div>
+              </div>
+
+              {/* Novos Campos: Validade e Lote */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-blue-50 p-6 rounded-3xl border-2 border-blue-100">
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-black text-blue-600 uppercase tracking-widest flex items-center gap-2">
+                     <Calendar size={14} /> Data de Vencimento
+                  </label>
+                  <input name="expiryDate" defaultValue={editingProduct?.expiryDate} type="date" className="h-16 p-5 bg-white border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-xl transition-all" />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-black text-blue-600 uppercase tracking-widest flex items-center gap-2">
+                     <Tag size={14} /> Número do Lote
+                  </label>
+                  <input name="batch" defaultValue={editingProduct?.batch} type="text" placeholder="Ex: L-2025-01" className="h-16 p-5 bg-white border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none font-bold text-xl transition-all" />
                 </div>
               </div>
 
