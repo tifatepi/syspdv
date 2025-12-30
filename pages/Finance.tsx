@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useApp } from '../App';
 import { ICONS } from '../constants';
 import { Transaction, CashSession } from '../types';
-import { Wallet, LogIn, LogOut, ArrowUpCircle, ArrowDownCircle, Info, Calculator, X } from 'lucide-react';
+import { Wallet, LogIn, LogOut, ArrowUpCircle, ArrowDownCircle, Info, Calculator, X, CreditCard, Smartphone, Banknote, TrendingUp } from 'lucide-react';
 
 const Finance: React.FC = () => {
   const { transactions, setTransactions, sales, cashSession, setCashSession } = useApp();
@@ -13,11 +13,22 @@ const Finance: React.FC = () => {
   const [amountInput, setAmountInput] = useState('');
   const [descInput, setDescInput] = useState('');
 
-  // Cálculos de Caixa Baseados na Sessão
+  // Cálculos por Modalidade
   const cashSalesToday = sales
     .filter(s => s.paymentMethod === 'DINHEIRO')
     .reduce((acc, s) => acc + s.total, 0);
 
+  const pixSalesToday = sales
+    .filter(s => s.paymentMethod === 'PIX')
+    .reduce((acc, s) => acc + s.total, 0);
+
+  const cardSalesToday = sales
+    .filter(s => ['DÉBITO', 'CRÉDITO', 'ALIMENTAÇÃO', 'BENEFÍCIO'].includes(s.paymentMethod as string))
+    .reduce((acc, s) => acc + s.total, 0);
+
+  const totalRevenueToday = sales.reduce((acc, s) => acc + s.total, 0);
+
+  // Cálculo específico da Gaveta (Dinheiro Físico)
   const expectedBalance = cashSession.startingBalance + cashSalesToday + cashSession.totalSuprimentos - cashSession.totalSangrias;
 
   const handleAction = (e: React.FormEvent) => {
@@ -37,7 +48,6 @@ const Finance: React.FC = () => {
     } else if (modalType === 'CLOSE') {
       setCashSession(prev => ({ ...prev, isOpen: false, closedAt: new Date().toLocaleString() }));
     } else {
-      // Sangria ou Suprimento
       const newTransaction: Transaction = {
         id: Math.random().toString(36).substring(7),
         type: modalType as any,
@@ -64,8 +74,8 @@ const Finance: React.FC = () => {
     <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 overflow-y-auto h-full custom-scrollbar">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
-          <h1 className="text-4xl font-black text-slate-800 tracking-tighter uppercase">Gestão de Caixa</h1>
-          <p className="text-slate-500 font-medium mt-2">Monitoramento de dinheiro físico e movimentações de balcão</p>
+          <h1 className="text-4xl font-black text-slate-800 tracking-tighter uppercase">Gestão Financeira</h1>
+          <p className="text-slate-500 font-medium mt-2">Monitoramento de vendas, faturamento e fluxo de caixa físico</p>
         </div>
         {!cashSession.isOpen ? (
           <button 
@@ -98,26 +108,62 @@ const Finance: React.FC = () => {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white p-8 rounded-[40px] shadow-sm border-2 border-slate-100">
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Saldo Inicial</p>
-           <p className="text-2xl font-black text-slate-800">R$ {cashSession.startingBalance.toFixed(2)}</p>
+      {/* Cards de Faturamento Geral (Modalidades Digitais) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white p-8 rounded-[40px] shadow-sm border-2 border-slate-100 flex items-center gap-5">
+           <div className="w-16 h-16 bg-teal-50 text-teal-600 rounded-3xl flex items-center justify-center">
+              <Smartphone size={32} />
+           </div>
+           <div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Vendas em PIX</p>
+              <p className="text-3xl font-black text-teal-600 tracking-tighter">R$ {pixSalesToday.toFixed(2)}</p>
+           </div>
         </div>
-        <div className="bg-white p-8 rounded-[40px] shadow-sm border-2 border-slate-100">
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Vendas Dinheiro</p>
-           <p className="text-2xl font-black text-emerald-600">+ R$ {cashSalesToday.toFixed(2)}</p>
+        <div className="bg-white p-8 rounded-[40px] shadow-sm border-2 border-slate-100 flex items-center gap-5">
+           <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center">
+              <CreditCard size={32} />
+           </div>
+           <div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Cartões (Déb/Créd)</p>
+              <p className="text-3xl font-black text-blue-600 tracking-tighter">R$ {cardSalesToday.toFixed(2)}</p>
+           </div>
         </div>
-        <div className="bg-white p-8 rounded-[40px] shadow-sm border-2 border-slate-100">
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Suprimento / Sangria</p>
-           <p className={`text-2xl font-black ${(cashSession.totalSuprimentos - cashSession.totalSangrias) >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
-             { (cashSession.totalSuprimentos - cashSession.totalSangrias) >= 0 ? '+' : '' }
-             R$ {(cashSession.totalSuprimentos - cashSession.totalSangrias).toFixed(2)}
-           </p>
+        <div className="bg-blue-600 p-8 rounded-[40px] shadow-2xl flex items-center gap-5 text-white">
+           <div className="w-16 h-16 bg-white/20 rounded-3xl flex items-center justify-center">
+              <TrendingUp size={32} />
+           </div>
+           <div>
+              <p className="text-[10px] font-black text-blue-200 uppercase tracking-widest mb-1">Faturamento Total</p>
+              <p className="text-3xl font-black tracking-tighter">R$ {totalRevenueToday.toFixed(2)}</p>
+           </div>
         </div>
-        <div className="bg-slate-900 p-8 rounded-[40px] shadow-2xl relative overflow-hidden">
-           <div className="absolute -top-4 -right-4 w-20 h-20 bg-blue-500/10 rounded-full" />
-           <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-3">Saldo em Gaveta</p>
-           <p className="text-3xl font-black text-white tracking-tighter">R$ {expectedBalance.toFixed(2)}</p>
+      </div>
+
+      <div className="pt-4">
+        <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-3">
+          <Banknote size={16} /> Fluxo de Caixa Físico (Gaveta)
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-white p-8 rounded-[40px] shadow-sm border-2 border-slate-100">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Saldo Inicial</p>
+            <p className="text-2xl font-black text-slate-800">R$ {cashSession.startingBalance.toFixed(2)}</p>
+          </div>
+          <div className="bg-white p-8 rounded-[40px] shadow-sm border-2 border-slate-100">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Vendas Dinheiro</p>
+            <p className="text-2xl font-black text-emerald-600">+ R$ {cashSalesToday.toFixed(2)}</p>
+          </div>
+          <div className="bg-white p-8 rounded-[40px] shadow-sm border-2 border-slate-100">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Suprimento / Sangria</p>
+            <p className={`text-2xl font-black ${(cashSession.totalSuprimentos - cashSession.totalSangrias) >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+              { (cashSession.totalSuprimentos - cashSession.totalSangrias) >= 0 ? '+' : '' }
+              R$ {(cashSession.totalSuprimentos - cashSession.totalSangrias).toFixed(2)}
+            </p>
+          </div>
+          <div className="bg-slate-900 p-8 rounded-[40px] shadow-2xl relative overflow-hidden">
+            <div className="absolute -top-4 -right-4 w-20 h-20 bg-blue-500/10 rounded-full" />
+            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-3">Saldo em Gaveta</p>
+            <p className="text-3xl font-black text-white tracking-tighter">R$ {expectedBalance.toFixed(2)}</p>
+          </div>
         </div>
       </div>
 
