@@ -10,6 +10,14 @@ export interface User {
   role: UserRole;
 }
 
+export interface Client {
+  id: string;
+  name: string;
+  cpf: string;
+  contact: string;
+  points?: number;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -39,11 +47,15 @@ export enum PaymentMethod {
 export interface Sale {
   id: string;
   items: CartItem[];
+  subtotal: number;
   total: number;
   discount: number;
   paymentMethod: PaymentMethod | string;
   timestamp: string;
   operatorId: string;
+  operator: string;
+  clientCpf?: string; // CPF do consumidor para o recibo
+  clientName?: string;
 }
 
 export interface Supplier {

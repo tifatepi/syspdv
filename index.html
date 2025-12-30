@@ -7,33 +7,47 @@
     <title>QuickTouch POS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+      /* Estilos de Impressão (Impressora Térmica 80mm) */
       @media print {
+        @page {
+          margin: 0;
+          size: 80mm auto;
+        }
         .no-print { display: none !important; }
         .print-only { display: block !important; }
-        body { width: 80mm; margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace; }
-      }
-      .print-only { display: none; }
-      
-      /* Smooth scroll for product grids */
-      .custom-scrollbar::-webkit-scrollbar {
-        width: 8px;
-      }
-      .custom-scrollbar::-webkit-scrollbar-track {
-        background: #f1f1f1;
-      }
-      .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: #888;
-        border-radius: 4px;
-      }
-      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-        background: #555;
+        
+        body { 
+          width: 80mm; 
+          margin: 0; 
+          padding: 0; 
+          background-color: white !important;
+          color: black !important;
+          font-family: 'Courier New', Courier, monospace;
+          font-size: 12pt;
+        }
+
+        #root { display: none !important; } /* Esconde a aplicação React inteira para imprimir apenas o portal de recibo se necessário, ou usamos classes específicas */
+        
+        /* Se o recibo estiver dentro do root, garantimos que apenas ele apareça */
+        body > *:not(.print-content) {
+          display: none !important;
+        }
+        .print-content {
+          display: block !important;
+          width: 100%;
+        }
       }
 
+      .print-only { display: none; }
+      
+      /* Custom Scrollbar */
+      .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+      .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+      .custom-scrollbar::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #555; }
+
       /* Touch active state feedback */
-      .btn-touch-active:active {
-        transform: scale(0.95);
-        opacity: 0.8;
-      }
+      .btn-touch-active:active { transform: scale(0.95); opacity: 0.8; }
     </style>
     <script type="importmap">
 {
@@ -52,7 +66,6 @@
   </head>
   <body class="bg-slate-50 text-slate-900 overflow-hidden h-screen w-screen selection:bg-blue-100">
     <div id="root"></div>
-    <!-- Script de entrada essencial para evitar tela branca -->
     <script type="module" src="./index.tsx"></script>
   </body>
 </html>

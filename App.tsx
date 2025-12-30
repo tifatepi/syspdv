@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { HashRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
-import { User, UserRole, Product, Sale, Transaction, Supplier } from './types';
+import { User, UserRole, Product, Sale, Transaction, Supplier, Client } from './types';
 import { MOCK_USER, INITIAL_PRODUCTS, INITIAL_SUPPLIERS } from './services/mockData';
 import { ICONS } from './constants';
 
@@ -10,6 +10,8 @@ interface AppContextType {
   setUser: (user: User | null) => void;
   products: Product[];
   setProducts: React.Dispatch<React.SetStateAction<Product[]>>;
+  clients: Client[];
+  setClients: React.Dispatch<React.SetStateAction<Client[]>>;
   sales: Sale[];
   setSales: React.Dispatch<React.SetStateAction<Sale[]>>;
   transactions: Transaction[];
@@ -34,6 +36,7 @@ import Products from './pages/Products';
 import Finance from './pages/Finance';
 import Reports from './pages/Reports';
 import Suppliers from './pages/Suppliers';
+import Clients from './pages/Clients';
 import Login from './pages/Login';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -61,6 +64,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <NavLink to="/dashboard" icon={ICONS.Dashboard} label="Dashboard" active={location.pathname === '/dashboard'} />
             <NavLink to="/pdv" icon={ICONS.PDV} label="Venda (PDV)" active={location.pathname === '/pdv'} />
             <NavLink to="/products" icon={ICONS.Products} label="Produtos" active={location.pathname === '/products'} />
+            <NavLink to="/clients" icon={ICONS.User} label="Clientes" active={location.pathname === '/clients'} />
             <NavLink to="/suppliers" icon={ICONS.Suppliers} label="Fornecedores" active={location.pathname === '/suppliers'} />
             <NavLink to="/finance" icon={ICONS.Finance} label="Financeiro" active={location.pathname === '/finance'} />
             <NavLink to="/reports" icon={ICONS.Reports} label="Relatórios" active={location.pathname === '/reports'} />
@@ -116,6 +120,7 @@ const NavLink = ({ to, icon, label, active }: { to: string, icon: any, label: st
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(MOCK_USER);
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
+  const [clients, setClients] = useState<Client[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>(INITIAL_SUPPLIERS);
@@ -124,6 +129,7 @@ const App: React.FC = () => {
   const value = {
     user, setUser,
     products, setProducts,
+    clients, setClients,
     sales, setSales,
     transactions, setTransactions,
     suppliers, setSuppliers,
@@ -139,6 +145,7 @@ const App: React.FC = () => {
           <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
           <Route path="/pdv" element={<Layout><PDV /></Layout>} />
           <Route path="/products" element={<Layout><Products /></Layout>} />
+          <Route path="/clients" element={<Layout><Clients /></Layout>} />
           <Route path="/suppliers" element={<Layout><Suppliers /></Layout>} />
           <Route path="/finance" element={<Layout><Finance /></Layout>} />
           <Route path="/reports" element={<Layout><Reports /></Layout>} />
