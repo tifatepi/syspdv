@@ -46,7 +46,7 @@ const PDV: React.FC = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [cart, showClientModal, cpfInput]); // Dependências cruciais para capturar o estado atual
+  }, [cart, showClientModal, cpfInput]);
 
   const playBeep = (type: 'add' | 'success' | 'cancel' = 'add') => {
     try {
@@ -117,8 +117,8 @@ const PDV: React.FC = () => {
       paymentMethod: method,
       timestamp: new Date().toLocaleString('pt-BR'),
       operatorId: user?.id || 'u1',
-      operator: user?.name || 'Caixa',
-      clientCpf: selectedClient?.cpf || cpfInput || 'CONSUMIDOR NÃO IDENTIFICADO',
+      operator: user?.name || 'Caixa 01',
+      clientCpf: selectedClient?.cpf || cpfInput || 'CONSUMIDOR',
       clientName: selectedClient?.name || ''
     };
     
@@ -161,60 +161,47 @@ const PDV: React.FC = () => {
     window.print();
   };
 
+  // Divide o timestamp em Data e Hora
+  const getFormattedTime = (ts: string) => {
+    const parts = ts.split(' ');
+    return { date: parts[0], time: parts[1] || '' };
+  };
+
   return (
     <div className="flex h-screen bg-[#f1f5f9] select-none">
+      {/* MODELO DE RECIBO PARA IMPRESSÃO TÉRMICA */}
       {lastSale && (
         <div className="print-only print-content">
-          <div style={{ textAlign: 'center', fontWeight: 'bold', marginBottom: '10px' }}>
-            QUICKTOUCH POS SISTEMAS<br/>
-            CNPJ: 00.000.000/0001-00<br/>
-            --------------------------------<br/>
-            RECIBO DE VENDA<br/>
-            --------------------------------
-          </div>
-          <div style={{ marginBottom: '10px' }}>
-            DATA: {lastSale.timestamp}<br/>
-            OPERADOR: {lastSale.operator}<br/>
-            PEDIDO: #{lastSale.id}
-          </div>
-          <div style={{ marginBottom: '10px', borderTop: '1px dashed black', paddingTop: '5px' }}>
-            CONSUMIDOR: {lastSale.clientCpf}<br/>
-            {lastSale.clientName && `NOME: ${lastSale.clientName}`}
-          </div>
-          <div style={{ borderBottom: '1px dashed black', marginBottom: '10px' }}></div>
-          <div style={{ marginBottom: '10px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
-              <span>ITEM</span>
-              <span>TOTAL</span>
-            </div>
-            {lastSale.items.map((it: any) => (
-              <div key={it.id} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>{it.quantity}x {it.name.substring(0, 18)}</span>
-                <span>R$ {(it.price * it.quantity).toFixed(2)}</span>
-              </div>
-            ))}
-          </div>
-          <div style={{ borderTop: '1px dashed black', paddingTop: '5px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>SUBTOTAL:</span>
-              <span>R$ {lastSale.subtotal.toFixed(2)}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>DESCONTO:</span>
-              <span>- R$ {lastSale.discount.toFixed(2)}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.2em', marginTop: '5px', borderTop: '1px solid black', paddingTop: '5px' }}>
-              <span>TOTAL:</span>
-              <span>R$ {lastSale.total.toFixed(2)}</span>
-            </div>
-          </div>
-          <div style={{ marginTop: '20px', borderTop: '1px dashed black', paddingTop: '10px' }}>
-            FORMA DE PAGAMENTO: {lastSale.paymentMethod}<br/>
-            --------------------------------<br/>
-            <div style={{ textAlign: 'center', marginTop: '10px' }}>
-              OBRIGADO PELA PREFERENCIA!
-            </div>
-          </div>
+          <pre style={{ 
+            fontFamily: 'monospace', 
+            fontSize: '12px', 
+            lineHeight: '1.2',
+            whiteSpace: 'pre-wrap',
+            margin: 0
+          }}>
+{`      MERCEARIA DO CLAUDIO
+     CNPJ: 00.000.000/0001-00
+--------------------------------
+Data: ${getFormattedTime(lastSale.timestamp).date}  Hora: ${getFormattedTime(lastSale.timestamp).time}
+Operador: ${lastSale.operator}
+--------------------------------
+Produto        Qtd   Valor
+${lastSale.items.map((it: any) => {
+  const name = it.name.substring(0, 15).padEnd(15, ' ');
+  const qty = it.quantity.toString().padStart(4, ' ');
+  const val = (it.price * it.quantity).toFixed(2).padStart(8, ' ');
+  return `${name}${qty}${val}`;
+}).join('\n')}
+--------------------------------
+Subtotal:           ${lastSale.subtotal.toFixed(2).padStart(8, ' ')}
+Desconto:           ${lastSale.discount.toFixed(2).padStart(8, ' ')}
+TOTAL:              ${lastSale.total.toFixed(2).padStart(8, ' ')}
+--------------------------------
+Pagamento: ${lastSale.paymentMethod}
+--------------------------------
+Obrigado pela preferência!
+--------------------------------`}
+          </pre>
           <div style={{ height: '50px' }}></div>
         </div>
       )}
@@ -508,31 +495,39 @@ const PDV: React.FC = () => {
              </div>
              <h2 className="text-3xl font-black">Venda Concluída!</h2>
              
-             <div className="bg-slate-50 p-6 rounded-2xl w-full font-mono text-left text-xs border border-dashed border-slate-300">
-                <p className="font-bold text-center border-b pb-2 mb-2 uppercase">Recibo Balcão</p>
-                <div className="mb-2 text-[10px]">
-                   <p>DATA: {lastSale.timestamp}</p>
-                   <p>OP: {lastSale.operator}</p>
-                   <p className="font-bold">CPF: {lastSale.clientCpf}</p>
-                </div>
-                <div className="space-y-1 py-2 border-y border-dashed">
-                  {lastSale.items.map((it: any) => (
-                    <div key={it.id} className="flex justify-between">
-                      <span>{it.quantity}x {it.name.substring(0, 20)}</span>
-                      <span>R$ {(it.price * it.quantity).toFixed(2)}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-2 font-bold text-sm">
-                   <div className="flex justify-between"><span>TOTAL PAGO</span> <span>R$ {lastSale.total.toFixed(2)}</span></div>
-                </div>
+             {/* Simulação Visual do Recibo na tela */}
+             <div className="bg-slate-50 p-6 rounded-2xl w-full font-mono text-left text-[11px] border border-dashed border-slate-300 shadow-inner overflow-hidden">
+                <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
+{`      MERCEARIA DO CLAUDIO
+     CNPJ: 00.000.000/0001-00
+--------------------------------
+Data: ${getFormattedTime(lastSale.timestamp).date}  Hora: ${getFormattedTime(lastSale.timestamp).time}
+Operador: ${lastSale.operator}
+--------------------------------
+Produto        Qtd   Valor
+${lastSale.items.map((it: any) => {
+  const name = it.name.substring(0, 15).padEnd(15, ' ');
+  const qty = it.quantity.toString().padStart(4, ' ');
+  const val = (it.price * it.quantity).toFixed(2).padStart(8, ' ');
+  return `${name}${qty}${val}`;
+}).join('\n')}
+--------------------------------
+Subtotal:           ${lastSale.subtotal.toFixed(2).padStart(8, ' ')}
+Desconto:           ${lastSale.discount.toFixed(2).padStart(8, ' ')}
+TOTAL:              ${lastSale.total.toFixed(2).padStart(8, ' ')}
+--------------------------------
+Pagamento: ${lastSale.paymentMethod}
+--------------------------------
+Obrigado pela preferência!
+--------------------------------`}
+                </pre>
              </div>
 
              <div className="flex flex-col w-full gap-2">
-                <button onClick={handlePrint} className="w-full py-4 bg-slate-900 text-white rounded-xl font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-slate-900/20">
+                <button onClick={handlePrint} className="w-full py-4 bg-slate-900 text-white rounded-xl font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-slate-900/20 active:scale-95 transition-transform">
                   {ICONS.Printer} IMPRIMIR RECIBO
                 </button>
-                <button onClick={resetVenda} className="w-full py-4 bg-blue-600 text-white rounded-xl font-black uppercase tracking-widest shadow-lg shadow-blue-200">PRÓXIMA VENDA</button>
+                <button onClick={resetVenda} className="w-full py-4 bg-blue-600 text-white rounded-xl font-black uppercase tracking-widest shadow-lg shadow-blue-200 active:scale-95 transition-transform">PRÓXIMA VENDA</button>
              </div>
           </div>
         </div>
