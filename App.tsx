@@ -3,13 +3,15 @@ import React, { useState, useEffect, createContext, useContext } from 'react';
 import { HashRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { User, UserRole, Product, Sale, Transaction, Supplier, Client } from './types';
 import { MOCK_USER, INITIAL_PRODUCTS, INITIAL_SUPPLIERS } from './services/mockData';
-import { ICONS } from './constants';
+import { ICONS, CATEGORIES as INITIAL_CATEGORIES } from './constants';
 
 interface AppContextType {
   user: User | null;
   setUser: (user: User | null) => void;
   products: Product[];
   setProducts: React.Dispatch<React.SetStateAction<Product[]>>;
+  categories: string[];
+  setCategories: React.Dispatch<React.SetStateAction<string[]>>;
   clients: Client[];
   setClients: React.Dispatch<React.SetStateAction<Client[]>>;
   sales: Sale[];
@@ -120,6 +122,7 @@ const NavLink = ({ to, icon, label, active }: { to: string, icon: any, label: st
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(MOCK_USER);
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
+  const [categories, setCategories] = useState<string[]>(INITIAL_CATEGORIES);
   const [clients, setClients] = useState<Client[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -129,6 +132,7 @@ const App: React.FC = () => {
   const value = {
     user, setUser,
     products, setProducts,
+    categories, setCategories,
     clients, setClients,
     sales, setSales,
     transactions, setTransactions,

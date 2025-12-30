@@ -2,13 +2,16 @@
 import React, { useState } from 'react';
 import { useApp } from '../App';
 import { Product } from '../types';
-import { ICONS, CATEGORIES } from '../constants';
+import { ICONS } from '../constants';
+import { Tag, Plus, Trash2, X } from 'lucide-react';
 
 const Products: React.FC = () => {
-  const { products, setProducts } = useApp();
+  const { products, setProducts, categories, setCategories } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [newCategoryName, setNewCategoryName] = useState('');
 
   const filtered = products.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -19,6 +22,28 @@ const Products: React.FC = () => {
   const handleDelete = (id: string) => {
     if (confirm('Deseja excluir permanentemente este produto do catálogo?')) {
       setProducts(prev => prev.filter(p => p.id !== id));
+    }
+  };
+
+  const handleAddCategory = () => {
+    if (!newCategoryName.trim()) return;
+    if (categories.includes(newCategoryName)) {
+      alert('Esta categoria já existe!');
+      return;
+    }
+    setCategories(prev => [...prev, newCategoryName]);
+    setNewCategoryName('');
+  };
+
+  const handleDeleteCategory = (cat: string) => {
+    if (cat === 'Todos') return;
+    const hasProducts = products.some(p => p.category === cat);
+    if (hasProducts) {
+      alert('Não é possível excluir uma categoria que possui produtos vinculados!');
+      return;
+    }
+    if (confirm(`Deseja excluir a categoria "${cat}"?`)) {
+      setCategories(prev => prev.filter(c => c !== cat));
     }
   };
 
@@ -56,12 +81,20 @@ const Products: React.FC = () => {
           <h1 className="text-4xl font-black text-slate-800 tracking-tighter">Catálogo de Produtos</h1>
           <p className="text-slate-500 font-medium mt-2">Gerenciamento completo de preços, estoque e validade</p>
         </div>
-        <button 
-          onClick={() => { setEditingProduct(null); setIsModalOpen(true); }}
-          className="w-full md:w-auto px-10 py-5 bg-blue-600 text-white rounded-[24px] font-black shadow-2xl shadow-blue-900/40 hover:bg-blue-700 hover:-translate-y-1 transition-all flex items-center justify-center gap-3 btn-touch-active"
-        >
-          {ICONS.Plus} NOVO PRODUTO
-        </button>
+        <div className="flex gap-4 w-full md:w-auto">
+          <button 
+            onClick={() => setIsCategoryModalOpen(true)}
+            className="flex-1 md:flex-none px-6 py-5 bg-slate-100 text-slate-600 rounded-[24px] font-black hover:bg-slate-200 transition-all flex items-center justify-center gap-3 btn-touch-active"
+          >
+            <Tag size={20} /> CATEGORIAS
+          </button>
+          <button 
+            onClick={() => { setEditingProduct(null); setIsModalOpen(true); }}
+            className="flex-1 md:flex-none px-10 py-5 bg-blue-600 text-white rounded-[24px] font-black shadow-2xl shadow-blue-900/40 hover:bg-blue-700 hover:-translate-y-1 transition-all flex items-center justify-center gap-3 btn-touch-active"
+          >
+            {ICONS.Plus} NOVO PRODUTO
+          </button>
+        </div>
       </div>
 
       <div className="bg-white p-6 rounded-[32px] shadow-sm border-2 border-slate-100 flex items-center gap-4">
@@ -122,14 +155,12 @@ const Products: React.FC = () => {
                         onClick={() => { setEditingProduct(product); setIsModalOpen(true); }}
                         className="w-12 h-12 bg-slate-100 text-slate-500 hover:bg-blue-600 hover:text-white rounded-xl flex items-center justify-center transition-all shadow-sm"
                       >
-                        {/* Fixed: Added <any> to React.cloneElement to satisfy TypeScript size prop requirement */}
                         {React.cloneElement(ICONS.Settings as React.ReactElement<any>, { size: 20 })}
                       </button>
                       <button 
                         onClick={() => handleDelete(product.id)}
                         className="w-12 h-12 bg-slate-100 text-slate-500 hover:bg-red-500 hover:text-white rounded-xl flex items-center justify-center transition-all shadow-sm"
                       >
-                        {/* Fixed: Added <any> to React.cloneElement to satisfy TypeScript size prop requirement */}
                         {React.cloneElement(ICONS.Trash as React.ReactElement<any>, { size: 20 })}
                       </button>
                     </div>
@@ -139,17 +170,60 @@ const Products: React.FC = () => {
             </tbody>
           </table>
         </div>
-        {filtered.length === 0 && (
-          <div className="p-32 text-center flex flex-col items-center gap-6">
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-200">
-               {/* Fixed: Added <any> to React.cloneElement to satisfy TypeScript size prop requirement */}
-               {React.cloneElement(ICONS.Products as React.ReactElement<any>, { size: 48 })}
-            </div>
-            <p className="text-xl font-bold text-slate-400">Nenhum produto corresponde à busca.</p>
-          </div>
-        )}
       </div>
 
+      {/* Modal Gerenciar Categorias */}
+      {isCategoryModalOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md">
+          <div className="bg-white rounded-[40px] w-full max-w-lg p-10 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center mb-8">
+               <h2 className="text-2xl font-black text-slate-800 flex items-center gap-3">
+                 <Tag size={24} className="text-blue-600" /> Categorias
+               </h2>
+               <button onClick={() => setIsCategoryModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                 <X size={24} />
+               </button>
+            </div>
+
+            <div className="space-y-4 mb-8">
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  placeholder="Nova categoria..." 
+                  className="flex-1 h-14 px-5 bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl outline-none font-bold"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAddCategory()}
+                />
+                <button 
+                  onClick={handleAddCategory}
+                  className="h-14 w-14 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-900/20 btn-touch-active"
+                >
+                  <Plus size={24} />
+                </button>
+              </div>
+            </div>
+
+            <div className="max-h-60 overflow-y-auto custom-scrollbar space-y-2">
+              {categories.map(cat => (
+                <div key={cat} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl group">
+                  <span className="font-bold text-slate-700">{cat}</span>
+                  {cat !== 'Todos' && (
+                    <button 
+                      onClick={() => handleDeleteCategory(cat)}
+                      className="text-slate-300 hover:text-red-500 transition-colors"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Produto */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md">
           <form onSubmit={handleSave} className="bg-white rounded-[40px] w-full max-w-3xl p-12 shadow-2xl animate-in zoom-in-95 duration-200">
@@ -181,7 +255,7 @@ const Products: React.FC = () => {
                 <div className="flex flex-col gap-2">
                   <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Categoria</label>
                   <select name="category" defaultValue={editingProduct?.category} className="h-16 p-5 bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl outline-none font-bold text-lg transition-all appearance-none">
-                    {CATEGORIES.filter(c => c !== 'Todos').map(c => <option key={c} value={c}>{c}</option>)}
+                    {categories.filter(c => c !== 'Todos').map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
               </div>

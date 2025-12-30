@@ -2,11 +2,11 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useApp } from '../App';
 import { Product, CartItem, Sale, Client } from '../types';
-import { CATEGORIES, PAYMENT_METHODS, ICONS } from '../constants';
+import { PAYMENT_METHODS, ICONS } from '../constants';
 import { ShoppingCart, Search, Package, Plus, Minus, X, UserCheck, UserPlus, User } from 'lucide-react';
 
 const PDV: React.FC = () => {
-  const { products, setProducts, setSales, user, setHeldSales, clients } = useApp();
+  const { products, setProducts, setSales, user, setHeldSales, clients, categories } = useApp();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [activeCategory, setActiveCategory] = useState('Todos');
   const [searchTerm, setSearchTerm] = useState('');
@@ -16,7 +16,6 @@ const PDV: React.FC = () => {
   const [showReceipt, setShowReceipt] = useState(false);
   const [lastSale, setLastSale] = useState<any>(null);
   
-  // Estado para o cliente selecionado na venda
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [cpfInput, setCpfInput] = useState('');
 
@@ -57,13 +56,12 @@ const PDV: React.FC = () => {
     });
   }, [products, activeCategory, searchTerm]);
 
-  // Filtro de clientes sugeridos no modal de identificação
   const matchedClients = useMemo(() => {
     if (!cpfInput) return [];
     return clients.filter(c => 
       c.cpf.includes(cpfInput) || 
       c.name.toLowerCase().includes(cpfInput.toLowerCase())
-    ).slice(0, 4); // Limita a 4 para não poluir o touch
+    ).slice(0, 4);
   }, [clients, cpfInput]);
 
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
@@ -148,7 +146,6 @@ const PDV: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-[#f1f5f9] select-none">
-      {/* AREA DE IMPRESSAO - Esta div é controlada pelo @media print no index.html */}
       {lastSale && (
         <div className="print-only print-content">
           <div style={{ textAlign: 'center', fontWeight: 'bold', marginBottom: '10px' }}>
@@ -201,18 +198,16 @@ const PDV: React.FC = () => {
               OBRIGADO PELA PREFERENCIA!
             </div>
           </div>
-          {/* Espaço extra para a guilhotina da impressora */}
           <div style={{ height: '50px' }}></div>
         </div>
       )}
 
-      {/* Sidebar Categorias (NÃO IMPRIME) */}
       <aside className="w-20 bg-white border-r flex flex-col items-center py-4 gap-2 no-print shrink-0">
         <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white mb-4 shadow-lg shadow-blue-200">
           <ShoppingCart size={24} />
         </div>
         <div className="flex-1 w-full overflow-y-auto custom-scrollbar flex flex-col items-center gap-2 px-1">
-          {CATEGORIES.map(cat => (
+          {categories.map(cat => (
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
@@ -230,7 +225,6 @@ const PDV: React.FC = () => {
         </div>
       </aside>
 
-      {/* Main PDV Area (NÃO IMPRIME) */}
       <div className="flex-1 flex flex-col p-3 gap-3 overflow-hidden no-print">
         <div className="flex gap-3 items-center">
           <div className="relative flex-1">
@@ -280,7 +274,6 @@ const PDV: React.FC = () => {
         </div>
       </div>
 
-      {/* Carrinho lateral (NÃO IMPRIME) */}
       <div className="w-[380px] bg-white border-l shadow-2xl flex flex-col shrink-0 no-print">
         <div className="p-4 border-b flex justify-between items-center bg-slate-50">
           <div className="flex items-center gap-2">
@@ -381,7 +374,6 @@ const PDV: React.FC = () => {
         </div>
       </div>
 
-      {/* Modais (NÃO IMPRIMEM - no-print aplicado nos containers superiores) */}
       {showClientModal && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-sm no-print">
           <div className="bg-white rounded-[40px] w-full max-w-4xl p-8 shadow-2xl overflow-hidden flex flex-col md:flex-row gap-8">
@@ -483,7 +475,6 @@ const PDV: React.FC = () => {
         </div>
       )}
 
-      {/* Tela de Recibo Final - VISUALIZAÇÃO EM TELA (no-print) */}
       {showReceipt && lastSale && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-white p-6 no-print overflow-y-auto">
           <div className="flex flex-col items-center gap-6 max-w-sm w-full text-center">
@@ -492,7 +483,6 @@ const PDV: React.FC = () => {
              </div>
              <h2 className="text-3xl font-black">Venda Concluída!</h2>
              
-             {/* Simulação Visual do Recibo */}
              <div className="bg-slate-50 p-6 rounded-2xl w-full font-mono text-left text-xs border border-dashed border-slate-300">
                 <p className="font-bold text-center border-b pb-2 mb-2 uppercase">Recibo Balcão</p>
                 <div className="mb-2 text-[10px]">
