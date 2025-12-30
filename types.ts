@@ -28,8 +28,8 @@ export interface Product {
   stock: number;
   minStock: number;
   category: string;
-  expiryDate?: string; // Mantido opcional para flexibilidade, mas usado nos alertas
-  batch?: string;      // Campo de Lote
+  expiryDate?: string;
+  batch?: string;
 }
 
 export interface CartItem extends Product {
@@ -68,9 +68,20 @@ export interface Supplier {
 
 export interface Transaction {
   id: string;
-  type: 'INCOME' | 'EXPENSE';
+  type: 'INCOME' | 'EXPENSE' | 'SANGRIA' | 'SUPRIMENTO';
   description: string;
   amount: number;
   date: string;
   category: string;
+}
+
+export interface CashSession {
+  isOpen: boolean;
+  openedAt?: string;
+  closedAt?: string;
+  startingBalance: number;
+  totalCashSales: number;
+  totalSuprimentos: number;
+  totalSangrias: number;
+  expectedFinalBalance: number;
 }

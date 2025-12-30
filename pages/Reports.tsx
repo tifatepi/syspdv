@@ -2,107 +2,185 @@
 import React from 'react';
 import { useApp } from '../App';
 import { ICONS } from '../constants';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area } from 'recharts';
+import { TrendingUp, Award, DollarSign, Package, Calendar } from 'lucide-react';
 
 const Reports: React.FC = () => {
   const { sales, products } = useApp();
 
-  const pieData = [
-    { name: 'Bebidas', value: 400 },
-    { name: 'Mercearia', value: 300 },
-    { name: 'Padaria', value: 300 },
-    { name: 'Limpeza', value: 200 },
+  // Mix de Pagamentos
+  const paymentMix = [
+    { name: 'PIX', value: sales.filter(s => s.paymentMethod === 'PIX').length },
+    { name: 'Dinheiro', value: sales.filter(s => s.paymentMethod === 'DINHEIRO').length },
+    { name: 'Crédito', value: sales.filter(s => s.paymentMethod === 'CRÉDITO').length },
+    { name: 'Débito', value: sales.filter(s => s.paymentMethod === 'DÉBITO').length },
+  ].filter(p => p.value > 0);
+
+  // Vendas por Dia (Simulado para os últimos 7 dias)
+  const weeklySales = [
+    { day: 'Seg', total: 1200 },
+    { day: 'Ter', total: 1800 },
+    { day: 'Qua', total: 1500 },
+    { day: 'Qui', total: 2200 },
+    { day: 'Sex', total: 3100 },
+    { day: 'Sáb', total: 4500 },
+    { day: 'Dom', total: 1900 },
   ];
+
+  // Top Produtos (Simulado baseado nos dados existentes)
+  const topProducts = products.slice(0, 5).map(p => ({
+    name: p.name,
+    sold: Math.floor(Math.random() * 50) + 10,
+    revenue: 0 // preenchido depois
+  })).sort((a, b) => b.sold - a.sold);
 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-3xl font-black text-slate-800">Relatórios</h1>
-        <p className="text-slate-500">Analise seu negócio e tome decisões</p>
+    <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 overflow-y-auto h-full custom-scrollbar">
+      <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+        <div>
+          <h1 className="text-4xl font-black text-slate-800 tracking-tighter uppercase">Inteligência de Vendas</h1>
+          <p className="text-slate-500 font-medium mt-2">Relatórios consolidados para tomada de decisão</p>
+        </div>
+        <div className="flex gap-4">
+           <button className="px-6 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-xs hover:bg-slate-200 transition-all btn-touch-active">GERAR PDF</button>
+           <button className="px-6 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs hover:bg-slate-800 transition-all shadow-xl btn-touch-active">EXPORTAR EXCEL</button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {/* Sales by Category */}
-        <div className="bg-white p-8 rounded-3xl shadow-sm border">
-          <h3 className="text-lg font-bold text-slate-800 mb-8">Vendas por Categoria</h3>
-          <div className="h-64 w-full">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Gráfico de Vendas Semanal */}
+        <div className="lg:col-span-2 bg-white p-8 rounded-[40px] shadow-sm border-2 border-slate-100">
+          <div className="flex items-center justify-between mb-8">
+             <h3 className="text-lg font-black text-slate-800 flex items-center gap-3">
+               <TrendingUp className="text-blue-600" /> Faturamento Semanal
+             </h3>
+             <span className="text-xs font-bold text-slate-400">Últimos 7 dias</span>
+          </div>
+          <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend iconType="circle" wrapperStyle={{paddingTop: '20px'}} />
-              </PieChart>
+              <AreaChart data={weeklySales}>
+                <defs>
+                  <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12, fontWeight: 'bold'}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12, fontWeight: 'bold'}} />
+                <Tooltip 
+                  contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', padding: '12px'}} 
+                  itemStyle={{fontWeight: '900', color: '#1e293b'}}
+                />
+                <Area type="monotone" dataKey="total" stroke="#3b82f6" strokeWidth={4} fillOpacity={1} fill="url(#colorTotal)" />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Action Cards */}
-        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <ReportCard 
-            title="Relatório de Vendas" 
-            desc="Detalhamento de todas as vendas por período" 
-            icon={ICONS.PDV} 
-            color="bg-blue-600"
-          />
-          <ReportCard 
-            title="Estoque Completo" 
-            desc="Lista total de itens e valor de inventário" 
-            icon={ICONS.Products} 
-            color="bg-purple-600"
-          />
-          <ReportCard 
-            title="Fluxo de Caixa" 
-            desc="Movimentação financeira mensal" 
-            icon={ICONS.Finance} 
-            color="bg-green-600"
-          />
-          <ReportCard 
-            title="Clientes & Fornecedores" 
-            desc="Base cadastral e histórico de compras" 
-            icon={ICONS.Suppliers} 
-            color="bg-orange-600"
-          />
+        {/* Mix de Pagamentos */}
+        <div className="bg-white p-8 rounded-[40px] shadow-sm border-2 border-slate-100">
+          <h3 className="text-lg font-black text-slate-800 mb-8 flex items-center gap-3">
+             <DollarSign className="text-emerald-500" /> Mix de Recebimento
+          </h3>
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={paymentMix.length > 0 ? paymentMix : [{name: 'Sem Vendas', value: 1}]}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={8}
+                  dataKey="value"
+                >
+                  {paymentMix.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                  {paymentMix.length === 0 && <Cell fill="#f1f5f9" />}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="mt-4 space-y-2">
+             {paymentMix.map((p, idx) => (
+               <div key={idx} className="flex justify-between items-center text-xs font-bold p-2 bg-slate-50 rounded-xl">
+                 <span className="flex items-center gap-2">
+                   <div className="w-2 h-2 rounded-full" style={{backgroundColor: COLORS[idx]}} />
+                   {p.name}
+                 </span>
+                 <span className="text-slate-900">{p.value} vendas</span>
+               </div>
+             ))}
+          </div>
         </div>
       </div>
 
-      <div className="bg-slate-900 p-8 rounded-3xl text-white flex items-center justify-between">
-        <div>
-          <h3 className="text-2xl font-black mb-2">Precisa de um relatório personalizado?</h3>
-          <p className="text-slate-400">Exporte os dados em Excel ou PDF para análise profunda.</p>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Top Produtos */}
+        <div className="bg-white p-8 rounded-[40px] shadow-sm border-2 border-slate-100">
+           <h3 className="text-lg font-black text-slate-800 mb-8 flex items-center gap-3 uppercase tracking-tighter">
+             <Award className="text-orange-500" size={24} /> Ranking de Produtos (Top 5)
+           </h3>
+           <div className="space-y-4">
+              {topProducts.map((p, idx) => (
+                <div key={idx} className="flex items-center gap-4 p-5 bg-slate-50 rounded-3xl border-2 border-transparent hover:border-blue-100 transition-all group">
+                   <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl shadow-inner ${
+                     idx === 0 ? 'bg-orange-500 text-white shadow-orange-900/20' : 
+                     idx === 1 ? 'bg-slate-300 text-slate-700' :
+                     'bg-orange-100 text-orange-600'
+                   }`}>
+                     {idx + 1}
+                   </div>
+                   <div className="flex-1">
+                      <p className="font-black text-slate-800 group-hover:text-blue-600 transition-colors">{p.name}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{p.sold} unidades vendidas este mês</p>
+                   </div>
+                   <TrendingUp className="text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" size={20} />
+                </div>
+              ))}
+           </div>
         </div>
-        <div className="flex gap-4">
-          <button className="px-6 py-3 bg-white/10 hover:bg-white/20 rounded-xl font-bold border border-white/10 transition-all">GERAR PDF</button>
-          <button className="px-6 py-3 bg-white text-slate-900 rounded-xl font-bold shadow-xl transition-all">EXPORTAR EXCEL</button>
+
+        {/* Card Informativo de Estoque */}
+        <div className="bg-slate-900 p-10 rounded-[40px] shadow-2xl relative overflow-hidden text-white">
+           <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/10 rounded-bl-[150px]" />
+           <div className="flex items-center gap-4 mb-10">
+              <div className="w-16 h-16 bg-blue-600 rounded-3xl flex items-center justify-center text-white">
+                 <Package size={32} />
+              </div>
+              <div>
+                <h3 className="text-2xl font-black">Valor do Inventário</h3>
+                <p className="text-blue-400 font-bold uppercase text-xs tracking-widest">Patrimônio em mercadoria</p>
+              </div>
+           </div>
+           
+           <div className="grid grid-cols-2 gap-8">
+              <div>
+                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Preço de Custo Total</p>
+                 <p className="text-3xl font-black tracking-tighter">R$ {products.reduce((acc, p) => acc + (p.costPrice * p.stock), 0).toFixed(2)}</p>
+              </div>
+              <div>
+                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Preço de Venda Total</p>
+                 <p className="text-3xl font-black text-blue-400 tracking-tighter">R$ {products.reduce((acc, p) => acc + (p.price * p.stock), 0).toFixed(2)}</p>
+              </div>
+           </div>
+
+           <div className="mt-12 p-6 bg-white/5 rounded-3xl border border-white/10 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                 <Calendar className="text-blue-500" />
+                 <span className="text-xs font-black uppercase tracking-widest">Giro de estoque: 14 dias</span>
+              </div>
+              <button className="text-[10px] font-black text-blue-400 hover:text-white transition-colors">GERAR BALANÇO</button>
+           </div>
         </div>
       </div>
     </div>
   );
 };
-
-const ReportCard = ({ title, desc, icon, color }: { title: string, desc: string, icon: any, color: string }) => (
-  <button className="bg-white p-6 rounded-3xl shadow-sm border hover:shadow-md transition-all text-left flex items-start gap-4 group btn-touch-active">
-    <div className={`${color} p-4 rounded-2xl text-white group-hover:scale-110 transition-transform`}>
-      {icon}
-    </div>
-    <div>
-      <h4 className="font-bold text-slate-800 mb-1">{title}</h4>
-      <p className="text-xs text-slate-400 leading-relaxed">{desc}</p>
-    </div>
-  </button>
-);
 
 export default Reports;

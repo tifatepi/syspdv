@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { HashRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
-import { User, UserRole, Product, Sale, Transaction, Supplier, Client } from './types';
+import { User, UserRole, Product, Sale, Transaction, Supplier, Client, CashSession } from './types';
 import { MOCK_USER, INITIAL_PRODUCTS, INITIAL_SUPPLIERS } from './services/mockData';
 import { ICONS, CATEGORIES as INITIAL_CATEGORIES } from './constants';
 
@@ -19,8 +20,8 @@ interface AppContextType {
   setTransactions: React.Dispatch<React.SetStateAction<Transaction[]>>;
   suppliers: Supplier[];
   setSuppliers: React.Dispatch<React.SetStateAction<Supplier[]>>;
-  heldSales: { id: string, cart: any[], discount: number, timestamp: string }[];
-  setHeldSales: React.Dispatch<React.SetStateAction<any[]>>;
+  cashSession: CashSession;
+  setCashSession: React.Dispatch<React.SetStateAction<CashSession>>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -65,7 +66,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           <nav className="flex-1 py-4 overflow-y-auto custom-scrollbar">
             <NavLink to="/dashboard" icon={ICONS.Dashboard} label="Dashboard" active={location.pathname === '/dashboard'} />
             <NavLink to="/pdv" icon={ICONS.PDV} label="Venda (PDV)" active={location.pathname === '/pdv'} />
-            {/* Fixed: Use React.cloneElement for ICONS.Clock as it is an element, not a component */}
             <NavLink to="/sales" icon={<div className="flex items-center justify-center w-6 h-6">{React.cloneElement(ICONS.Clock as React.ReactElement<any>, { size: 20 })}</div>} label="Histórico Vendas" active={location.pathname === '/sales'} />
             <NavLink to="/products" icon={ICONS.Products} label="Produtos" active={location.pathname === '/products'} />
             <NavLink to="/clients" icon={ICONS.User} label="Clientes" active={location.pathname === '/clients'} />
@@ -129,7 +129,14 @@ const App: React.FC = () => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>(INITIAL_SUPPLIERS);
-  const [heldSales, setHeldSales] = useState<any[]>([]);
+  const [cashSession, setCashSession] = useState<CashSession>({
+    isOpen: false,
+    startingBalance: 0,
+    totalCashSales: 0,
+    totalSuprimentos: 0,
+    totalSangrias: 0,
+    expectedFinalBalance: 0
+  });
 
   const value = {
     user, setUser,
@@ -139,7 +146,7 @@ const App: React.FC = () => {
     sales, setSales,
     transactions, setTransactions,
     suppliers, setSuppliers,
-    heldSales, setHeldSales
+    cashSession, setCashSession
   };
 
   return (

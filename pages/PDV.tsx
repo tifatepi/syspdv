@@ -3,10 +3,13 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useApp } from '../App';
 import { Product, CartItem, Sale, Client } from '../types';
 import { PAYMENT_METHODS, ICONS } from '../constants';
-import { ShoppingCart, Search, Package, Plus, Minus, X, UserCheck, UserPlus, User, ArrowLeft } from 'lucide-react';
+// Fixed: Added missing Printer to the imports from lucide-react
+import { ShoppingCart, Search, Package, Plus, Minus, X, UserCheck, UserPlus, User, ArrowLeft, Lock, LogIn, Printer } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const PDV: React.FC = () => {
-  const { products, setProducts, setSales, user, setHeldSales, clients, categories } = useApp();
+  // Fixed: Removed setHeldSales as it does not exist in AppContextType
+  const { products, setProducts, setSales, user, clients, categories, cashSession } = useApp();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [activeCategory, setActiveCategory] = useState('Todos');
   const [searchTerm, setSearchTerm] = useState('');
@@ -19,20 +22,17 @@ const PDV: React.FC = () => {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [cpfInput, setCpfInput] = useState('');
 
-  // Estados para Pagamento em Dinheiro
   const [isCashPayment, setIsCashPayment] = useState(false);
   const [amountReceived, setAmountReceived] = useState<string>('');
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Monitoramento de teclado físico
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Atalhos Globais
+      if (!cashSession.isOpen) return;
       if (e.key === 'F1') { e.preventDefault(); searchInputRef.current?.focus(); }
       if (e.key === 'F12' && cart.length > 0) { e.preventDefault(); setShowPaymentModal(true); }
       
-      // Lógica específica para o Modal de Cliente
       if (showClientModal) {
         if (e.key >= '0' && e.key <= '9') {
           if (cpfInput.length < 11) setCpfInput(prev => prev + e.key);
@@ -59,7 +59,7 @@ const PDV: React.FC = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [cart, showClientModal, cpfInput, showPaymentModal]);
+  }, [cart, showClientModal, cpfInput, showPaymentModal, cashSession.isOpen]);
 
   const playBeep = (type: 'add' | 'success' | 'cancel' = 'add') => {
     try {
@@ -98,6 +98,7 @@ const PDV: React.FC = () => {
   const total = Math.max(0, subtotal - discount);
 
   const addToCart = (product: Product) => {
+    if (!cashSession.isOpen) return;
     playBeep('add');
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
@@ -202,41 +203,23 @@ const PDV: React.FC = () => {
   const renderReceiptText = (sale: any) => {
     const { date, time } = getFormattedTime(sale.timestamp);
     const SEP = "--------------------------------";
-    
-    let receipt = `${SEP}\n`;
-    receipt += `      MERCEARIA DO CLAUDIO\n`;
-    receipt += `     CNPJ: 00.000.000/0001-00\n`;
-    receipt += `${SEP}\n`;
-    receipt += `Data: ${date}  Hora: ${time}\n`;
-    receipt += `Operador: ${sale.operator}\n`;
-    receipt += `${SEP}\n`;
-    
+    let receipt = `${SEP}\n      MERCEARIA DO CLAUDIO\n     CNPJ: 00.000.000/0001-00\n${SEP}\n`;
+    receipt += `Data: ${date}  Hora: ${time}\nOperador: ${sale.operator}\n${SEP}\n`;
     receipt += `Produto        Qtd   Valor\n`;
-
     sale.items.forEach((it: any) => {
       const name = it.name.substring(0, 14).padEnd(15, ' ');
       const qty = it.quantity.toString().padStart(4, ' ');
       const val = (it.price * it.quantity).toFixed(2).replace('.', ',').padStart(11, ' ');
       receipt += `${name}${qty}${val}\n`;
     });
-
-    receipt += `${SEP}\n`;
-    
-    receipt += `Subtotal:`.padEnd(15, ' ') + sale.subtotal.toFixed(2).replace('.', ',').padStart(17, ' ') + `\n`;
+    receipt += `${SEP}\nSubtotal:`.padEnd(15, ' ') + sale.subtotal.toFixed(2).replace('.', ',').padStart(17, ' ') + `\n`;
     receipt += `Desconto:`.padEnd(15, ' ') + sale.discount.toFixed(2).replace('.', ',').padStart(17, ' ') + `\n`;
-    receipt += `TOTAL:`.padEnd(15, ' ') + sale.total.toFixed(2).replace('.', ',').padStart(17, ' ') + `\n`;
-    receipt += `${SEP}\n`;
-
+    receipt += `TOTAL:`.padEnd(15, ' ') + sale.total.toFixed(2).replace('.', ',').padStart(17, ' ') + `\n${SEP}\n`;
     receipt += `Pagamento: ${sale.paymentMethod}\n`;
     if (sale.paymentMethod === 'DINHEIRO') {
-        receipt += `Valor Recebido: ${sale.amountReceived.toFixed(2)}\n`;
-        receipt += ` Troco: ${sale.change.toFixed(2)}\n`;
+        receipt += `Recebido: R$ ${sale.amountReceived.toFixed(2)}\n Troco: R$ ${sale.change.toFixed(2)}\n`;
     }
-
-    receipt += `${SEP}\n`;
-    receipt += `Obrigado pela preferência!\n`;
-    receipt += `${SEP}`;
-    
+    receipt += `${SEP}\nObrigado pela preferência!\n${SEP}`;
     return receipt;
   };
 
@@ -244,20 +227,34 @@ const PDV: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-[#f1f5f9] select-none">
-      {/* MODELO DE RECIBO PARA IMPRESSÃO TÉRMICA */}
+      {/* Bloqueio de Caixa Fechado */}
+      {!cashSession.isOpen && (
+        <div className="fixed inset-0 z-[300] bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-6 no-print">
+           <div className="bg-white rounded-[40px] p-12 max-w-lg w-full text-center shadow-2xl animate-in zoom-in-95 duration-300">
+              <div className="w-24 h-24 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-8">
+                 <Lock size={48} />
+              </div>
+              <h2 className="text-3xl font-black text-slate-800 mb-4 uppercase tracking-tighter">Caixa Fechado</h2>
+              <p className="text-slate-500 font-bold mb-10">Você precisa abrir o caixa para iniciar as vendas do turno.</p>
+              <div className="flex flex-col gap-4">
+                 <Link 
+                  to="/finance" 
+                  className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-blue-900/20 flex items-center justify-center gap-3 active:scale-95 transition-transform"
+                 >
+                   <LogIn size={20} /> IR PARA FINANCEIRO
+                 </Link>
+                 <Link to="/dashboard" className="text-slate-400 font-black text-xs uppercase tracking-widest py-2">Voltar ao Painel</Link>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* Recibo para Impressão */}
       {lastSale && (
         <div className="print-only print-content">
-          <pre style={{ 
-            fontFamily: 'monospace', 
-            fontSize: '12px', 
-            lineHeight: '1.2',
-            whiteSpace: 'pre-wrap',
-            margin: 0,
-            width: '100%'
-          }}>
-{renderReceiptText(lastSale)}
+          <pre style={{ fontFamily: 'monospace', fontSize: '12px', lineHeight: '1.2', whiteSpace: 'pre-wrap', margin: 0, width: '100%' }}>
+            {renderReceiptText(lastSale)}
           </pre>
-          <div style={{ height: '50px' }}></div>
         </div>
       )}
 
@@ -271,9 +268,7 @@ const PDV: React.FC = () => {
               key={cat}
               onClick={() => setActiveCategory(cat)}
               className={`w-full flex flex-col items-center py-3 rounded-xl transition-all ${
-                activeCategory === cat 
-                ? 'bg-blue-50 text-blue-600 border-2 border-blue-600' 
-                : 'text-slate-400 hover:bg-slate-50'
+                activeCategory === cat ? 'bg-blue-50 text-blue-600 border-2 border-blue-600' : 'text-slate-400 hover:bg-slate-50'
               }`}
             >
               <span className="text-[10px] font-black uppercase text-center leading-tight">
@@ -297,9 +292,6 @@ const PDV: React.FC = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <button onClick={() => setHeldSales(h => h)} className="h-12 w-12 bg-white rounded-xl flex items-center justify-center text-amber-500 shadow-sm hover:bg-amber-50">
-            {ICONS.Hold}
-          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -314,15 +306,11 @@ const PDV: React.FC = () => {
                 }`}
               >
                 <div className="flex-1 min-h-[60px]">
-                  <h4 className="text-sm font-black text-slate-700 leading-tight mb-1 group-hover:text-blue-600 line-clamp-2">
-                    {product.name}
-                  </h4>
+                  <h4 className="text-sm font-black text-slate-700 leading-tight mb-1 group-hover:text-blue-600 line-clamp-2">{product.name}</h4>
                   <span className="text-[10px] font-bold text-slate-400 uppercase">{product.category}</span>
                 </div>
                 <div className="mt-3 flex items-end justify-between">
-                  <span className="text-xl font-black text-slate-900 tracking-tighter">
-                    R$ {product.price.toFixed(2)}
-                  </span>
+                  <span className="text-xl font-black text-slate-900 tracking-tighter">R$ {product.price.toFixed(2)}</span>
                   <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
                     <Plus size={16} />
                   </div>
@@ -350,7 +338,7 @@ const PDV: React.FC = () => {
           {cart.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-slate-300 p-8 text-center opacity-50">
               <ShoppingCart size={48} className="mb-4" />
-              <p className="text-sm font-bold">CARRINHO VAZIO</p>
+              <p className="text-sm font-bold uppercase tracking-widest">Aguardando Itens</p>
             </div>
           ) : (
             <div className="divide-y divide-slate-50">
@@ -369,7 +357,6 @@ const PDV: React.FC = () => {
                       <button onClick={() => updateQuantity(item.id, 1)} className="w-6 h-6 rounded-md bg-white flex items-center justify-center text-slate-600 hover:bg-blue-50 shadow-sm"><Plus size={12} /></button>
                     </div>
                     <div className="text-right">
-                      <div className="text-[10px] text-slate-400 font-bold">UN: R$ {item.price.toFixed(2)}</div>
                       <div className="text-lg font-black text-blue-600 tracking-tighter">R$ {(item.price * item.quantity).toFixed(2)}</div>
                     </div>
                   </div>
@@ -379,151 +366,28 @@ const PDV: React.FC = () => {
           )}
         </div>
 
-        <div className="px-5 py-3 border-t bg-blue-50/50">
-           {selectedClient || (cpfInput && cpfInput.length > 0) ? (
-             <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-blue-200 shadow-sm">
-                <div className="flex items-center gap-3">
-                  <UserCheck className="text-blue-600" size={20} />
-                  <div>
-                    <p className="text-[10px] font-black uppercase text-slate-400">Cliente Identificado</p>
-                    <p className="text-xs font-black text-slate-700 truncate max-w-[180px]">{selectedClient?.name || `CPF: ${cpfInput}`}</p>
-                  </div>
-                </div>
-                <button onClick={() => { setSelectedClient(null); setCpfInput(''); }} className="text-slate-300 hover:text-red-500">
-                   <X size={16} />
-                </button>
-             </div>
-           ) : (
-             <button 
-              onClick={() => setShowClientModal(true)}
-              className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-blue-200 rounded-xl text-blue-600 font-black text-xs hover:bg-white transition-all"
-             >
-               <UserPlus size={16} /> CPF NA NOTA?
-             </button>
-           )}
-        </div>
-
         <div className="p-5 bg-slate-900 text-white rounded-t-[32px] shadow-[0_-10px_30px_rgba(0,0,0,0.1)]">
-          <div className="space-y-2 mb-4">
-            <div className="flex justify-between items-center text-slate-400 text-[10px] font-black uppercase tracking-widest">
-              <span>Subtotal</span>
-              <span>R$ {subtotal.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Desconto</span>
-              <div className="flex items-center gap-2">
-                <button onClick={() => setDiscount(d => Math.max(0, d - 1))} className="w-5 h-5 bg-slate-800 rounded flex items-center justify-center text-[10px]">-</button>
-                <span className="text-orange-400 font-black">- R$ {discount.toFixed(2)}</span>
-                <button onClick={() => setDiscount(d => d + 1)} className="w-5 h-5 bg-slate-800 rounded flex items-center justify-center text-[10px]">+</button>
-              </div>
-            </div>
-          </div>
-
-          <div className="h-px bg-slate-800 mb-4" />
-
           <div className="flex justify-between items-end mb-6">
             <span className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em]">Total Final</span>
             <span className="text-4xl font-black tracking-tighter leading-none">R$ {total.toFixed(2)}</span>
           </div>
 
           <div className="flex gap-2">
-             <button onClick={() => { resetVenda(); playBeep('cancel'); }} className="flex-1 py-4 rounded-xl bg-slate-800 text-slate-400 hover:bg-red-500/20 hover:text-red-500 transition-all font-black text-[10px] uppercase tracking-widest">LIMPAR (ESC)</button>
+             <button onClick={resetVenda} className="flex-1 py-4 rounded-xl bg-slate-800 text-slate-400 hover:text-red-500 font-black text-[10px] uppercase tracking-widest">LIMPAR</button>
              <button disabled={cart.length === 0} onClick={() => setShowPaymentModal(true)} className="flex-[2] py-4 rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-900/40 hover:bg-blue-500 transition-all font-black text-sm uppercase tracking-widest disabled:opacity-30">PAGAR (F12)</button>
           </div>
         </div>
       </div>
-
-      {showClientModal && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-sm no-print">
-          <div className="bg-white rounded-[40px] w-full max-w-4xl p-8 shadow-2xl overflow-hidden flex flex-col md:flex-row gap-8">
-            <div className="flex-1">
-              <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center gap-3">
-                   <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white">
-                     <UserPlus size={20} />
-                   </div>
-                   <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Identificar Cliente</h2>
-                </div>
-                <button className="md:hidden" onClick={() => setShowClientModal(false)}><X size={24} className="text-slate-400" /></button>
-              </div>
-              
-              <div className="bg-slate-50 p-6 rounded-3xl mb-4 border-2 border-slate-100">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Use o teclado físico ou botões</p>
-                <div className="text-4xl font-black text-blue-600 tracking-widest min-h-[48px] break-all flex items-center justify-center">
-                  {cpfInput || <span className="text-slate-200">000.000.000-00</span>}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', 'OK'].map(key => (
-                  <button
-                    key={key}
-                    onClick={() => {
-                      if (key === 'C') setCpfInput('');
-                      else if (key === 'OK') handleIdentifyCpf();
-                      else if (cpfInput.length < 11) setCpfInput(prev => prev + key);
-                    }}
-                    className={`h-16 rounded-2xl text-xl font-bold transition-all btn-touch-active ${
-                      key === 'OK' 
-                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' 
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
-                  >
-                    {key}
-                  </button>
-                ))}
-              </div>
-              <p className="text-[10px] text-center mt-4 font-bold text-slate-400 uppercase tracking-widest">
-                ENTER p/ confirmar • ESC p/ sair • BACKSPACE p/ apagar
-              </p>
-            </div>
-
-            <div className="w-full md:w-[320px] flex flex-col border-t md:border-t-0 md:border-l border-slate-100 pt-6 md:pt-0 md:pl-8">
-              <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Sugestões de Cadastro</h3>
-              <div className="flex-1 space-y-3 overflow-y-auto custom-scrollbar max-h-[300px] md:max-h-none">
-                {matchedClients.length > 0 ? (
-                  matchedClients.map(client => (
-                    <button 
-                      key={client.id}
-                      onClick={() => selectClientFromList(client)}
-                      className="w-full text-left p-4 rounded-2xl bg-slate-50 border-2 border-transparent hover:border-blue-500 hover:bg-blue-50 transition-all flex items-center gap-3 group"
-                    >
-                      <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                        <User size={18} />
-                      </div>
-                      <div className="overflow-hidden">
-                        <p className="font-bold text-slate-800 text-sm truncate">{client.name}</p>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">CPF: {client.cpf}</p>
-                      </div>
-                    </button>
-                  ))
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-40 text-slate-300 opacity-50">
-                    <UserPlus size={40} className="mb-2" />
-                    <p className="text-[10px] font-black uppercase text-center">Digite o CPF para<br/>buscar cliente</p>
-                  </div>
-                )}
-              </div>
-              <button 
-                onClick={() => setShowClientModal(false)}
-                className="mt-6 w-full py-4 rounded-2xl bg-slate-100 text-slate-500 font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition-all hidden md:block"
-              >
-                Voltar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {showPaymentModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-sm no-print">
           <div className="bg-white rounded-[40px] w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col md:flex-row">
             {!isCashPayment ? (
               <div className="flex-1 p-8">
-                <h2 className="text-2xl font-black text-slate-800 mb-6 uppercase tracking-tighter">Meio de Pagamento</h2>
+                <h2 className="text-2xl font-black text-slate-800 mb-6 uppercase tracking-tighter">Pagamento</h2>
                 <div className="grid grid-cols-2 gap-3">
                   {PAYMENT_METHODS.map(m => (
-                    <button key={m.id} onClick={() => handleSelectPaymentMethod(m.id)} className="flex items-center gap-3 p-5 rounded-2xl text-left border-2 border-slate-100 hover:border-blue-50 hover:bg-blue-50 transition-all group active:scale-95">
+                    <button key={m.id} onClick={() => handleSelectPaymentMethod(m.id)} className="flex items-center gap-3 p-5 rounded-2xl text-left border-2 border-slate-100 hover:border-blue-50 hover:bg-blue-50 transition-all active:scale-95">
                       <span className="text-2xl">{m.icon}</span>
                       <span className="font-black text-slate-700 uppercase text-xs tracking-widest">{m.label}</span>
                     </button>
@@ -533,96 +397,44 @@ const PDV: React.FC = () => {
             ) : (
               <div className="flex-1 p-8">
                 <div className="flex items-center gap-3 mb-6">
-                  <button onClick={() => setIsCashPayment(false)} className="p-2 hover:bg-slate-100 rounded-xl text-slate-400">
-                    <ArrowLeft size={24} />
-                  </button>
-                  <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Pagamento em Dinheiro</h2>
+                  <button onClick={() => setIsCashPayment(false)} className="p-2 hover:bg-slate-100 rounded-xl text-slate-400"><ArrowLeft size={24} /></button>
+                  <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Em Dinheiro</h2>
                 </div>
-                
                 <div className="space-y-6">
                    <div className="bg-slate-50 p-6 rounded-3xl border-2 border-slate-100">
-                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-2">Valor Recebido R$</label>
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-2">Recebido R$</label>
                       <input 
                         autoFocus
                         type="number" 
                         step="0.01"
-                        placeholder="0,00"
-                        className="w-full bg-transparent border-none text-4xl font-black text-blue-600 focus:ring-0 placeholder-slate-200 outline-none"
+                        className="w-full bg-transparent border-none text-4xl font-black text-blue-600 outline-none"
                         value={amountReceived}
                         onChange={(e) => setAmountReceived(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && handleFinishSale('DINHEIRO')}
                       />
                    </div>
-
                    <div className="bg-orange-50 p-6 rounded-3xl border-2 border-orange-100 flex justify-between items-center">
                       <div>
-                        <label className="text-xs font-black text-orange-400 uppercase tracking-widest block mb-1">Troco a Devolver</label>
-                        <span className="text-4xl font-black text-orange-600 tracking-tighter">
-                          R$ {changeValue.toFixed(2)}
-                        </span>
+                        <label className="text-xs font-black text-orange-400 uppercase tracking-widest block mb-1">Troco</label>
+                        <span className="text-4xl font-black text-orange-600 tracking-tighter">R$ {changeValue.toFixed(2)}</span>
                       </div>
-                      <div className="bg-orange-600/10 p-3 rounded-2xl text-orange-600 font-black text-xs uppercase tracking-widest">
-                        {changeValue > 0 ? 'Dar Troco' : 'Sem Troco'}
-                      </div>
-                   </div>
-
-                   <div className="grid grid-cols-3 gap-2">
-                      {[10, 20, 50, 100].map(val => (
-                        <button 
-                          key={val}
-                          onClick={() => setAmountReceived(val.toString())}
-                          className="py-4 bg-slate-100 text-slate-600 rounded-2xl font-black hover:bg-slate-200 transition-all active:scale-95"
-                        >
-                          R$ {val}
-                        </button>
-                      ))}
-                      <button 
-                        onClick={() => setAmountReceived(total.toString())}
-                        className="col-span-2 py-4 bg-blue-50 text-blue-600 rounded-2xl font-black hover:bg-blue-100 transition-all active:scale-95"
-                      >
-                        VALOR EXATO (R$ {total.toFixed(2)})
-                      </button>
                    </div>
                 </div>
-                
                 <button 
                   disabled={parseFloat(amountReceived) < total}
                   onClick={() => handleFinishSale('DINHEIRO')}
-                  className="w-full mt-8 py-5 bg-blue-600 text-white rounded-[24px] font-black uppercase tracking-widest shadow-xl shadow-blue-900/20 disabled:opacity-30 disabled:shadow-none transition-all active:scale-95"
+                  className="w-full mt-8 py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl disabled:opacity-30 active:scale-95 transition-all"
                 >
                   FINALIZAR VENDA
                 </button>
               </div>
             )}
-
             <div className="w-full md:w-[240px] bg-blue-600 p-8 text-white flex flex-col justify-between">
               <div>
-                <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Total à Receber</span>
+                <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Total</span>
                 <div className="text-4xl font-black tracking-tighter mt-1">R$ {total.toFixed(2)}</div>
-                
-                <div className="mt-8">
-                  <div className="text-[10px] font-black uppercase tracking-widest opacity-60">Consumidor</div>
-                  <div className="text-sm font-bold truncate">{selectedClient?.name || (cpfInput.length > 0 ? cpfInput : 'Não identificado')}</div>
-                </div>
-
-                <div className="mt-4">
-                  <div className="text-[10px] font-black uppercase tracking-widest opacity-60">Itens</div>
-                  <div className="text-sm font-bold">{cart.reduce((a, b) => a + b.quantity, 0)} unidades</div>
-                </div>
               </div>
-
-              {!isCashPayment ? (
-                <button 
-                  onClick={() => setShowPaymentModal(false)} 
-                  className="w-full py-4 bg-white/10 hover:bg-white/20 rounded-2xl font-black text-xs uppercase tracking-widest transition-all"
-                >
-                  CANCELAR (ESC)
-                </button>
-              ) : (
-                <div className="text-[10px] font-bold text-center opacity-50 uppercase tracking-widest leading-relaxed">
-                  Digite o valor recebido<br/>para calcular o troco
-                </div>
-              )}
+              <button onClick={() => setShowPaymentModal(false)} className="w-full py-4 bg-white/10 hover:bg-white/20 rounded-2xl font-black text-xs uppercase tracking-widest">CANCELAR</button>
             </div>
           </div>
         </div>
@@ -635,19 +447,14 @@ const PDV: React.FC = () => {
                 {ICONS.Finish}
              </div>
              <h2 className="text-3xl font-black">Venda Concluída!</h2>
-             
-             {/* Simulação Visual do Recibo na tela */}
-             <div className="bg-slate-50 p-6 rounded-2xl w-full font-mono text-left text-[11px] border border-dashed border-slate-300 shadow-inner overflow-hidden">
-                <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
-{renderReceiptText(lastSale)}
-                </pre>
+             <div className="bg-slate-50 p-6 rounded-2xl w-full font-mono text-left text-[11px] border border-dashed border-slate-300 shadow-inner">
+                <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>{renderReceiptText(lastSale)}</pre>
              </div>
-
              <div className="flex flex-col w-full gap-2">
-                <button onClick={handlePrint} className="w-full py-4 bg-slate-900 text-white rounded-xl font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-slate-900/20 active:scale-95 transition-transform">
-                  {ICONS.Printer} IMPRIMIR RECIBO
+                <button onClick={handlePrint} className="w-full py-4 bg-slate-900 text-white rounded-xl font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-transform">
+                  <Printer size={20} /> IMPRIMIR RECIBO
                 </button>
-                <button onClick={resetVenda} className="w-full py-4 bg-blue-600 text-white rounded-xl font-black uppercase tracking-widest shadow-lg shadow-blue-200 active:scale-95 transition-transform">PRÓXIMA VENDA</button>
+                <button onClick={resetVenda} className="w-full py-4 bg-blue-600 text-white rounded-xl font-black uppercase tracking-widest active:scale-95 transition-transform">PRÓXIMA VENDA</button>
              </div>
           </div>
         </div>
