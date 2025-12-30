@@ -1,3 +1,5 @@
+
+// Added useState to React imports
 import React, { useState } from 'react';
 import { useApp } from '../App';
 import { ICONS } from '../constants';
@@ -30,7 +32,7 @@ const Finance: React.FC = () => {
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
+    <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 overflow-y-auto h-full custom-scrollbar">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
           <h1 className="text-4xl font-black text-slate-800 tracking-tighter">Fluxo Financeiro</h1>
@@ -63,8 +65,8 @@ const Finance: React.FC = () => {
           <p className="text-slate-400 font-black text-xs uppercase tracking-[0.2em] mb-4">Total Vendas</p>
           <p className="text-4xl font-black text-slate-800 tracking-tighter">R$ {totalSales.toFixed(2)}</p>
           <div className="mt-4 flex items-center gap-2 text-green-500 font-black text-xs">
-            {/* Fix: Use ICONS.Finish instead of ICONS.CheckCircle2 */}
-            {ICONS.Finish.type({...ICONS.Finish.props, size: 14})} {sales.length} VENDAS HOJE
+            {/* Fixed: Added <any> to React.cloneElement to satisfy TypeScript size prop requirement */}
+            {React.cloneElement(ICONS.Finish as React.ReactElement<any>, { size: 14 })} {sales.length} VENDAS HOJE
           </div>
         </div>
         <div className="bg-white p-10 rounded-[40px] shadow-sm border-2 border-slate-100 flex flex-col justify-center">

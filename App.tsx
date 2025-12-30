@@ -5,7 +5,6 @@ import { User, UserRole, Product, Sale, Transaction, Supplier } from './types';
 import { MOCK_USER, INITIAL_PRODUCTS, INITIAL_SUPPLIERS } from './services/mockData';
 import { ICONS } from './constants';
 
-// Context for global state
 interface AppContextType {
   user: User | null;
   setUser: (user: User | null) => void;
@@ -29,7 +28,6 @@ export const useApp = () => {
   return context;
 };
 
-// Pages
 import Dashboard from './pages/Dashboard';
 import PDV from './pages/PDV';
 import Products from './pages/Products';
@@ -53,11 +51,11 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const isPDV = location.pathname === '/pdv';
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50">
+    <div className="flex h-screen overflow-hidden bg-[#f8fafc]">
       {!isPDV && (
-        <aside className="w-64 bg-slate-900 text-white flex flex-col no-print shrink-0">
+        <aside className="w-64 bg-[#0f172a] text-white flex flex-col no-print shrink-0">
           <div className="p-6 border-b border-slate-800">
-            <h1 className="text-xl font-bold tracking-tight">QuickTouch <span className="text-blue-400">POS</span></h1>
+            <h1 className="text-xl font-black tracking-tighter">QuickTouch <span className="text-blue-500">POS</span></h1>
           </div>
           <nav className="flex-1 py-4 overflow-y-auto custom-scrollbar">
             <NavLink to="/dashboard" icon={ICONS.Dashboard} label="Dashboard" active={location.pathname === '/dashboard'} />
@@ -68,18 +66,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <NavLink to="/reports" icon={ICONS.Reports} label="Relatórios" active={location.pathname === '/reports'} />
           </nav>
           <div className="p-4 border-t border-slate-800">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center font-bold text-white shadow-lg">
-                {user.name.charAt(0)}
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <p className="text-sm font-medium truncate text-slate-100">{user.name}</p>
-                <p className="text-xs text-slate-400 uppercase tracking-wider">{user.role}</p>
-              </div>
-            </div>
             <button 
               onClick={() => setUser(null)}
-              className="w-full flex items-center gap-2 text-slate-400 hover:text-red-400 transition-colors py-2 text-sm font-medium"
+              className="w-full flex items-center gap-2 text-slate-400 hover:text-red-400 transition-colors py-2 text-sm font-bold"
             >
               {ICONS.Logout} Sair
             </button>
@@ -88,28 +77,19 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       )}
 
       <main className="flex-1 flex flex-col overflow-hidden relative">
-        <header className="h-16 bg-white border-b flex items-center justify-between px-6 z-10 no-print shadow-sm shrink-0">
-          <div className="flex items-center gap-4">
-            {isPDV && (
-              <Link to="/dashboard" className="text-slate-500 hover:text-blue-600 font-bold flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 transition-all">
-                {ICONS.Dashboard} <span className="hidden md:inline">Painel Admin</span>
-              </Link>
-            )}
-            {!isPDV && <div className="h-4 w-px bg-slate-200" />}
-            <h2 className="font-bold text-slate-800 text-lg">
-              {location.pathname === '/pdv' ? 'Frente de Caixa (PDV)' : (location.pathname.substring(1).charAt(0).toUpperCase() + location.pathname.substring(2))}
+        {!isPDV && (
+          <header className="h-14 bg-white border-b flex items-center justify-between px-6 z-10 no-print shadow-sm shrink-0">
+            <h2 className="font-black text-slate-800 text-base uppercase tracking-widest">
+              {location.pathname.substring(1)}
             </h2>
-          </div>
-          
-          <div className="flex items-center gap-6">
-            <div className="hidden sm:flex items-center gap-2 text-slate-500 text-sm font-medium bg-slate-100 px-3 py-1.5 rounded-full">
-              {ICONS.User} <span>{user.name}</span>
+            <div className="flex items-center gap-4">
+              <div className="text-slate-400 font-bold text-sm uppercase tracking-tighter">{time}</div>
+              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-[10px] font-black text-white">
+                {user.name.substring(0,2).toUpperCase()}
+              </div>
             </div>
-            <div className="flex items-center gap-2 text-slate-700 font-black text-lg">
-              {ICONS.Clock} <span>{time}</span>
-            </div>
-          </div>
-        </header>
+          </header>
+        )}
 
         <div className="flex-1 overflow-hidden">
           {children}
@@ -124,12 +104,12 @@ const NavLink = ({ to, icon, label, active }: { to: string, icon: any, label: st
     to={to} 
     className={`flex items-center gap-3 px-6 py-4 transition-all duration-200 ${
       active 
-      ? 'bg-blue-600 text-white shadow-xl translate-x-1' 
+      ? 'bg-blue-600 text-white shadow-lg z-10' 
       : 'text-slate-400 hover:text-white hover:bg-slate-800'
     }`}
   >
-    <div className={active ? 'scale-110' : ''}>{icon}</div>
-    <span className="font-bold">{label}</span>
+    <div className={active ? 'scale-110' : ''}>{React.cloneElement(icon as React.ReactElement<any>, { size: 20 })}</div>
+    <span className="font-bold text-sm">{label}</span>
   </Link>
 );
 

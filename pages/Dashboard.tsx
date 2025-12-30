@@ -2,16 +2,16 @@
 import React from 'react';
 import { useApp } from '../App';
 import { ICONS } from '../constants';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const Dashboard: React.FC = () => {
   const { sales, products } = useApp();
 
   const stats = [
-    { label: 'Vendas Hoje', value: `R$ ${sales.length * 25.50}`, icon: ICONS.PDV, color: 'bg-blue-500' },
+    { label: 'Vendas Hoje', value: `R$ ${sales.reduce((acc, s) => acc + s.total, 0).toFixed(2)}`, icon: ICONS.PDV, color: 'bg-blue-500' },
     { label: 'Total de Itens', value: products.length, icon: ICONS.Products, color: 'bg-green-500' },
     { label: 'Produtos Baixos', value: products.filter(p => p.stock <= p.minStock).length, icon: ICONS.Trash, color: 'bg-red-500' },
-    { label: 'Caixa do Dia', value: 'R$ 1.250,00', icon: ICONS.Finance, color: 'bg-purple-500' },
+    { label: 'Caixa do Dia', value: `R$ ${sales.reduce((acc, s) => acc + s.total, 0).toFixed(2)}`, icon: ICONS.Finance, color: 'bg-purple-500' },
   ];
 
   const chartData = [
@@ -25,8 +25,7 @@ const Dashboard: React.FC = () => {
   ];
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
-      {/* Stats Grid */}
+    <div className="p-8 max-w-7xl mx-auto space-y-8 overflow-y-auto h-full custom-scrollbar">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, idx) => (
           <div key={idx} className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
@@ -44,7 +43,6 @@ const Dashboard: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Sales Chart */}
         <div className="lg:col-span-2 bg-white rounded-2xl p-8 shadow-sm border border-slate-100">
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-lg font-bold text-slate-800">Desempenho de Vendas (Hoje)</h3>
@@ -66,14 +64,14 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Alerts & Low Stock */}
         <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100">
           <h3 className="text-lg font-bold text-slate-800 mb-6">Alertas Críticos</h3>
           <div className="space-y-4">
             {products.filter(p => p.stock <= p.minStock).map(p => (
               <div key={p.id} className="flex items-center gap-4 p-4 rounded-xl bg-red-50 border border-red-100">
                 <div className="bg-red-500 text-white p-2 rounded-lg">
-                  <ICONS.Trash.type {...ICONS.Trash.props} size={18} />
+                  {/* Fixed: Added <any> to React.cloneElement to satisfy TypeScript size prop requirement */}
+                  {React.cloneElement(ICONS.Trash as React.ReactElement<any>, { size: 18 })}
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-bold text-red-900">{p.name}</p>
@@ -86,7 +84,7 @@ const Dashboard: React.FC = () => {
                 <div className="bg-green-100 text-green-600 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
                   {ICONS.Finish}
                 </div>
-                <p className="text-slate-500 text-sm">Tudo em dia com o estoque!</p>
+                <p className="text-slate-500 text-sm font-medium">Tudo em dia com o estoque!</p>
               </div>
             )}
           </div>

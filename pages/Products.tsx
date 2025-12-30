@@ -50,7 +50,7 @@ const Products: React.FC = () => {
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
+    <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 overflow-y-auto h-full custom-scrollbar">
       <div className="flex flex-col md:flex-row justify-between items-center gap-6">
         <div>
           <h1 className="text-4xl font-black text-slate-800 tracking-tighter">Catálogo de Produtos</h1>
@@ -122,13 +122,15 @@ const Products: React.FC = () => {
                         onClick={() => { setEditingProduct(product); setIsModalOpen(true); }}
                         className="w-12 h-12 bg-slate-100 text-slate-500 hover:bg-blue-600 hover:text-white rounded-xl flex items-center justify-center transition-all shadow-sm"
                       >
-                        <ICONS.Settings.type {...ICONS.Settings.props} size={20} />
+                        {/* Fixed: Added <any> to React.cloneElement to satisfy TypeScript size prop requirement */}
+                        {React.cloneElement(ICONS.Settings as React.ReactElement<any>, { size: 20 })}
                       </button>
                       <button 
                         onClick={() => handleDelete(product.id)}
                         className="w-12 h-12 bg-slate-100 text-slate-500 hover:bg-red-500 hover:text-white rounded-xl flex items-center justify-center transition-all shadow-sm"
                       >
-                        <ICONS.Trash.type {...ICONS.Trash.props} size={20} />
+                        {/* Fixed: Added <any> to React.cloneElement to satisfy TypeScript size prop requirement */}
+                        {React.cloneElement(ICONS.Trash as React.ReactElement<any>, { size: 20 })}
                       </button>
                     </div>
                   </td>
@@ -140,7 +142,8 @@ const Products: React.FC = () => {
         {filtered.length === 0 && (
           <div className="p-32 text-center flex flex-col items-center gap-6">
             <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-200">
-               <ICONS.Products.type {...ICONS.Products.props} size={48} />
+               {/* Fixed: Added <any> to React.cloneElement to satisfy TypeScript size prop requirement */}
+               {React.cloneElement(ICONS.Products as React.ReactElement<any>, { size: 48 })}
             </div>
             <p className="text-xl font-bold text-slate-400">Nenhum produto corresponde à busca.</p>
           </div>

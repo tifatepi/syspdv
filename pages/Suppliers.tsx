@@ -14,7 +14,7 @@ const Suppliers: React.FC = () => {
   );
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-y-auto h-full custom-scrollbar">
       <div className="flex justify-between items-end">
         <div>
           <h1 className="text-4xl font-black text-slate-800 tracking-tighter">Fornecedores</h1>
@@ -47,8 +47,8 @@ const Suppliers: React.FC = () => {
         {filtered.map(supplier => (
           <div key={supplier.id} className="bg-white p-8 rounded-[32px] shadow-sm border-2 border-slate-100 hover:border-blue-500 transition-all group relative overflow-hidden">
             <div className="absolute top-0 right-0 w-24 h-24 bg-slate-50 rounded-bl-[60px] flex items-center justify-center text-slate-300">
-              {/* Fix: Use ICONS.Suppliers instead of ICONS.Users */}
-              <ICONS.Suppliers.type {...ICONS.Suppliers.props} size={32} />
+              {/* Fixed: Added <any> to React.cloneElement to satisfy TypeScript size prop requirement */}
+              {React.cloneElement(ICONS.Suppliers as React.ReactElement<any>, { size: 32 })}
             </div>
             
             <h3 className="text-xl font-black text-slate-800 mb-2 truncate pr-10">{supplier.name}</h3>
