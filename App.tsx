@@ -39,11 +39,10 @@ import Finance from './pages/Finance';
 import Reports from './pages/Reports';
 import Suppliers from './pages/Suppliers';
 import Clients from './pages/Clients';
-import Login from './pages/Login';
 import SalesHistory from './pages/SalesHistory';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, setUser } = useApp();
+  const { user } = useApp();
   const location = useLocation();
   const [time, setTime] = useState(new Date().toLocaleTimeString());
 
@@ -52,8 +51,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return () => clearInterval(timer);
   }, []);
 
-  if (!user) return <Navigate to="/login" />;
-
+  // Login desabilitado por enquanto - sempre renderiza o layout se houver um mock_user
   const isPDV = location.pathname === '/pdv';
 
   return (
@@ -74,12 +72,15 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <NavLink to="/reports" icon={ICONS.Reports} label="Relatórios" active={location.pathname === '/reports'} />
           </nav>
           <div className="p-4 border-t border-slate-800">
-            <button 
-              onClick={() => setUser(null)}
-              className="w-full flex items-center gap-2 text-slate-400 hover:text-red-400 transition-colors py-2 text-sm font-bold"
-            >
-              {ICONS.Logout} Sair
-            </button>
+             <div className="flex items-center gap-3 px-2 py-2">
+                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-[10px] font-black text-white">
+                  {user?.name.substring(0,2).toUpperCase()}
+                </div>
+                <div className="flex flex-col">
+                   <span className="text-xs font-bold text-white leading-none">{user?.name}</span>
+                   <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{user?.role}</span>
+                </div>
+             </div>
           </div>
         </aside>
       )}
@@ -92,9 +93,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             </h2>
             <div className="flex items-center gap-4">
               <div className="text-slate-400 font-bold text-sm uppercase tracking-tighter">{time}</div>
-              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-[10px] font-black text-white">
-                {user.name.substring(0,2).toUpperCase()}
-              </div>
             </div>
           </header>
         )}
@@ -153,7 +151,6 @@ const App: React.FC = () => {
     <AppContext.Provider value={value}>
       <HashRouter>
         <Routes>
-          <Route path="/login" element={<Login />} />
           <Route path="/" element={<Navigate to="/dashboard" />} />
           <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
           <Route path="/pdv" element={<Layout><PDV /></Layout>} />
@@ -163,6 +160,7 @@ const App: React.FC = () => {
           <Route path="/suppliers" element={<Layout><Suppliers /></Layout>} />
           <Route path="/finance" element={<Layout><Finance /></Layout>} />
           <Route path="/reports" element={<Layout><Reports /></Layout>} />
+          <Route path="*" element={<Navigate to="/dashboard" />} />
         </Routes>
       </HashRouter>
     </AppContext.Provider>
