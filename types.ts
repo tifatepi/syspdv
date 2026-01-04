@@ -30,6 +30,8 @@ export interface Product {
   category: string;
   expiryDate?: string;
   batch?: string;
+  size?: string;
+  color?: string;
 }
 
 export interface CartItem extends Product {

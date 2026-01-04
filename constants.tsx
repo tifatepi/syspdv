@@ -30,7 +30,9 @@ export const CATEGORIES = [
   'Limpeza',
   'Higiene',
   'Frios',
-  'Hortifruti'
+  'Hortifruti',
+  'Vestuário',
+  'Calçados'
 ];
 
 export const PAYMENT_METHODS = [

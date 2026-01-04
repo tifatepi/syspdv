@@ -1,9 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../App';
 import { Product } from '../types';
 import { ICONS } from '../constants';
-import { Tag, Plus, Trash2, X, Calendar, Package, DollarSign, Percent } from 'lucide-react';
+import { Tag, Plus, Trash2, X, Calendar, Package, DollarSign, Palette, Ruler } from 'lucide-react';
 
 const Products: React.FC = () => {
   const { products, setProducts, categories, setCategories } = useApp();
@@ -12,6 +12,18 @@ const Products: React.FC = () => {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
+  
+  // Estado para controlar a categoria selecionada no modal
+  const [selectedCategory, setSelectedCategory] = useState('');
+
+  // Atualiza a categoria selecionada quando o modal de edição abre
+  useEffect(() => {
+    if (editingProduct) {
+      setSelectedCategory(editingProduct.category);
+    } else {
+      setSelectedCategory('Mercearia'); // Default para novo produto
+    }
+  }, [editingProduct, isModalOpen]);
 
   const filtered = products.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -75,6 +87,8 @@ const Products: React.FC = () => {
       category: formData.get('category') as string,
       expiryDate: formData.get('expiryDate') as string,
       batch: formData.get('batch') as string,
+      size: formData.get('size') as string || undefined,
+      color: formData.get('color') as string || undefined,
     };
 
     if (editingProduct) {
@@ -138,7 +152,7 @@ const Products: React.FC = () => {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50 border-b-2 border-slate-100">
-                <th className="px-10 py-6 text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Item / Lote</th>
+                <th className="px-10 py-6 text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Item / Detalhes</th>
                 <th className="px-10 py-6 text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Validade</th>
                 <th className="px-10 py-6 text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Precificação</th>
                 <th className="px-10 py-6 text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Estoque</th>
@@ -154,9 +168,13 @@ const Products: React.FC = () => {
                     <td className="px-10 py-8">
                       <div className="flex flex-col">
                         <span className="font-black text-slate-800 text-xl leading-none mb-1 group-hover:text-blue-600 transition-colors">{product.name}</span>
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                           Lote: {product.batch || 'N/I'} | {product.sku}
-                        </span>
+                        <div className="flex gap-2 items-center">
+                           <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                              {product.sku}
+                           </span>
+                           {product.size && <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[9px] font-black uppercase">Tam: {product.size}</span>}
+                           {product.color && <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[9px] font-black uppercase">Cor: {product.color}</span>}
+                        </div>
                       </div>
                     </td>
                     <td className="px-10 py-8">
@@ -296,11 +314,44 @@ const Products: React.FC = () => {
                 </div>
                 <div className="flex flex-col gap-2 md:col-span-2">
                   <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Categoria</label>
-                  <select name="category" defaultValue={editingProduct?.category} className="h-16 p-5 bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl outline-none font-bold text-lg transition-all appearance-none">
+                  <select 
+                    name="category" 
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="h-16 p-5 bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl outline-none font-bold text-lg transition-all appearance-none"
+                  >
                     {categories.filter(c => c !== 'Todos').map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
               </div>
+
+              {/* Seção Dinâmica: Vestuário ou Calçados */}
+              {(selectedCategory === 'Vestuário' || selectedCategory === 'Calçados') && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-purple-50 p-8 rounded-[32px] border-2 border-purple-100 animate-in slide-in-from-top-4 duration-300">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-black text-purple-600 uppercase tracking-widest flex items-center gap-2">
+                       <Ruler size={14} /> Tamanho
+                    </label>
+                    {selectedCategory === 'Vestuário' ? (
+                      <select name="size" defaultValue={editingProduct?.size} className="h-16 p-5 bg-white border-2 border-transparent focus:border-purple-500 rounded-2xl outline-none font-black text-xl transition-all">
+                        <option value="P">P</option>
+                        <option value="M">M</option>
+                        <option value="G">G</option>
+                        <option value="GG">GG</option>
+                        <option value="Outro">Outro</option>
+                      </select>
+                    ) : (
+                      <input name="size" defaultValue={editingProduct?.size} type="text" placeholder="Ex: 38, 40, 42..." className="h-16 p-5 bg-white border-2 border-transparent focus:border-purple-500 rounded-2xl outline-none font-black text-xl transition-all" />
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-black text-purple-600 uppercase tracking-widest flex items-center gap-2">
+                       <Palette size={14} /> Cor
+                    </label>
+                    <input name="color" defaultValue={editingProduct?.color} type="text" placeholder="Ex: Azul Marinho, Branco..." className="h-16 p-5 bg-white border-2 border-transparent focus:border-purple-500 rounded-2xl outline-none font-black text-xl transition-all" />
+                  </div>
+                </div>
+              )}
 
               {/* Seção de Precificação */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-slate-50 p-8 rounded-[32px] border-2 border-slate-100">
@@ -348,7 +399,7 @@ const Products: React.FC = () => {
             </div>
             
             <div className="flex justify-end gap-6 mt-16">
-              <button type="button" onClick={() => { setIsModalOpen(false); setEditingProduct(null); }} className="px-10 py-5 text-slate-400 font-black tracking-widest text-xs btn-touch-active">FECHAR</button>
+              <button type="button" onClick={() => { setIsModalOpen(false); setEditingProduct(null); }} className="px-10 py-5 text-slate-400 font-black tracking-widest text-xs btn-touch-active uppercase">FECHAR</button>
               <button type="submit" className="px-12 py-5 bg-blue-600 text-white rounded-[24px] font-black shadow-2xl shadow-blue-900/20 btn-touch-active uppercase tracking-widest">SALVAR ALTERAÇÕES</button>
             </div>
           </form>
