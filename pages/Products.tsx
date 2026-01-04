@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../App';
 import { Product, StockMovement } from '../types';
 import { ICONS } from '../constants';
-import { Tag, Plus, Trash2, X, Calendar, Package, DollarSign, Palette, Ruler, History, ArrowUpCircle, ArrowDownCircle, RefreshCcw } from 'lucide-react';
+import { Tag, Plus, Trash2, X, Calendar, Package, DollarSign, Palette, Ruler, History, ArrowUpCircle, ArrowDownCircle, RefreshCcw, Scale } from 'lucide-react';
 
 const Products: React.FC = () => {
   const { products, setProducts, categories, setCategories, stockMovements, setStockMovements, user } = useApp();
@@ -16,6 +16,9 @@ const Products: React.FC = () => {
   const [newCategoryName, setNewCategoryName] = useState('');
   
   const [selectedCategory, setSelectedCategory] = useState('');
+
+  // Sugestões de unidades de medida
+  const UNIT_SUGGESTIONS = ['UN', 'KG', 'LT', 'PC', 'MT', 'CX', 'FD', 'PAR', 'GR', 'ML', 'DZ', 'BD'];
 
   useEffect(() => {
     if (editingProduct) {
@@ -89,6 +92,7 @@ const Products: React.FC = () => {
       name: formData.get('name') as string,
       sku: formData.get('sku') as string,
       barcode: formData.get('barcode') as string,
+      unit: (formData.get('unit') as string || 'UN').toUpperCase(),
       price: parseFloat(formData.get('price') as string),
       costPrice: parseFloat(formData.get('costPrice') as string) || 0,
       stock: newStockValue,
@@ -101,7 +105,6 @@ const Products: React.FC = () => {
     };
 
     if (editingProduct) {
-      // Registrar Ajuste Manual se o estoque mudou
       if (editingProduct.stock !== newStockValue) {
         const diff = newStockValue - editingProduct.stock;
         const adjustment: StockMovement = {
@@ -126,7 +129,6 @@ const Products: React.FC = () => {
         id: newId,
       };
       
-      // Registrar movimento inicial
       if (newStockValue > 0) {
         const initialMovement: StockMovement = {
           id: Math.random().toString(36).substring(7).toUpperCase(),
@@ -216,6 +218,7 @@ const Products: React.FC = () => {
                            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
                               {product.sku}
                            </span>
+                           <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[9px] font-black uppercase">UND: {product.unit || 'UN'}</span>
                            {product.size && <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[9px] font-black uppercase">Tam: {product.size}</span>}
                            {product.color && <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[9px] font-black uppercase">Cor: {product.color}</span>}
                         </div>
@@ -252,7 +255,7 @@ const Products: React.FC = () => {
                         <span className={`px-4 py-2 rounded-xl text-sm font-black shadow-inner ${
                           product.stock <= product.minStock ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-600'
                         }`}>
-                          {product.stock} UN
+                          {product.stock} {product.unit || 'UN'}
                         </span>
                       </div>
                     </td>
@@ -287,7 +290,6 @@ const Products: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal Histórico (Kardex) */}
       {isHistoryModalOpen && historyProduct && (
         <div className="fixed inset-0 z-[130] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md">
            <div className="bg-white rounded-[40px] w-full max-w-4xl h-[80vh] flex flex-col shadow-2xl animate-in zoom-in-95 duration-200">
@@ -328,9 +330,9 @@ const Products: React.FC = () => {
                            </div>
                            <div className="text-right">
                               <p className={`text-xl font-black ${m.quantity > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                                {m.quantity > 0 ? '+' : ''}{m.quantity} UN
+                                {m.quantity > 0 ? '+' : ''}{m.quantity} {historyProduct.unit || 'UN'}
                               </p>
-                              <p className="text-[10px] font-black text-slate-400 uppercase">Estoque: {m.currentStock} UN</p>
+                              <p className="text-[10px] font-black text-slate-400 uppercase">Estoque: {m.currentStock} {historyProduct.unit || 'UN'}</p>
                            </div>
                         </div>
                       ))
@@ -342,7 +344,7 @@ const Products: React.FC = () => {
                  <div className="flex gap-10">
                     <div>
                        <p className="text-[10px] font-black text-slate-400 uppercase">Estoque Atual</p>
-                       <p className="text-2xl font-black text-slate-800">{historyProduct.stock} UN</p>
+                       <p className="text-2xl font-black text-slate-800">{historyProduct.stock} {historyProduct.unit || 'UN'}</p>
                     </div>
                     <div>
                        <p className="text-[10px] font-black text-slate-400 uppercase">Custo Médio</p>
@@ -355,7 +357,6 @@ const Products: React.FC = () => {
         </div>
       )}
 
-      {/* (rest of Category and Product Modals remain the same) */}
       {isCategoryModalOpen && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md">
           <div className="bg-white rounded-[40px] w-full max-w-lg p-10 shadow-2xl animate-in zoom-in-95 duration-200">
@@ -430,7 +431,7 @@ const Products: React.FC = () => {
                   <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Código de Barras</label>
                   <input name="barcode" defaultValue={editingProduct?.barcode} type="text" className="h-16 p-5 bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl outline-none font-bold text-xl transition-all" />
                 </div>
-                <div className="flex flex-col gap-2 md:col-span-2">
+                <div className="flex flex-col gap-2">
                   <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Categoria</label>
                   <select 
                     name="category" 
@@ -440,6 +441,21 @@ const Products: React.FC = () => {
                   >
                     {categories.filter(c => c !== 'Todos').map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                    <Scale size={14} className="text-blue-500" /> Unidade (UND)
+                  </label>
+                  <input 
+                    name="unit" 
+                    list="units-list"
+                    defaultValue={editingProduct?.unit || 'UN'} 
+                    placeholder="Ex: UN, KG, LT..."
+                    className="h-16 p-5 bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl outline-none font-black text-xl transition-all uppercase" 
+                  />
+                  <datalist id="units-list">
+                    {UNIT_SUGGESTIONS.map(u => <option key={u} value={u} />)}
+                  </datalist>
                 </div>
               </div>
 

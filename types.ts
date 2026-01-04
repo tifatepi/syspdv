@@ -27,6 +27,7 @@ export interface Product {
   costPrice: number;
   stock: number;
   minStock: number;
+  unit: string; // UN, KG, LT, PC, etc.
   category: string;
   expiryDate?: string;
   batch?: string;
