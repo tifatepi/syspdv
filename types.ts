@@ -94,6 +94,7 @@ export interface StockEntryItem {
 export interface StockEntry {
   id: string;
   invoiceNumber: string;
+  invoiceDate: string;
   supplierId: string;
   supplierName: string;
   items: StockEntryItem[];
