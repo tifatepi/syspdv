@@ -1,27 +1,27 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../App';
-import { Product } from '../types';
+import { Product, StockMovement } from '../types';
 import { ICONS } from '../constants';
-import { Tag, Plus, Trash2, X, Calendar, Package, DollarSign, Palette, Ruler } from 'lucide-react';
+import { Tag, Plus, Trash2, X, Calendar, Package, DollarSign, Palette, Ruler, History, ArrowUpCircle, ArrowDownCircle, RefreshCcw } from 'lucide-react';
 
 const Products: React.FC = () => {
-  const { products, setProducts, categories, setCategories } = useApp();
+  const { products, setProducts, categories, setCategories, stockMovements, setStockMovements, user } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [historyProduct, setHistoryProduct] = useState<Product | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
   
-  // Estado para controlar a categoria selecionada no modal
   const [selectedCategory, setSelectedCategory] = useState('');
 
-  // Atualiza a categoria selecionada quando o modal de edição abre
   useEffect(() => {
     if (editingProduct) {
       setSelectedCategory(editingProduct.category);
     } else {
-      setSelectedCategory('Mercearia'); // Default para novo produto
+      setSelectedCategory('Mercearia');
     }
   }, [editingProduct, isModalOpen]);
 
@@ -31,9 +31,15 @@ const Products: React.FC = () => {
     p.barcode.includes(searchTerm)
   );
 
+  const productMovements = useMemo(() => {
+    if (!historyProduct) return [];
+    return stockMovements.filter(m => m.productId === historyProduct.id);
+  }, [stockMovements, historyProduct]);
+
   const handleDelete = (id: string) => {
     if (confirm('Deseja excluir permanentemente este produto do catálogo?')) {
       setProducts(prev => prev.filter(p => p.id !== id));
+      setStockMovements(prev => prev.filter(m => m.productId !== id));
     }
   };
 
@@ -76,13 +82,16 @@ const Products: React.FC = () => {
   const handleSave = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const newStockValue = parseInt(formData.get('stock') as string);
+    const currentTimestamp = new Date().toLocaleString();
+
     const productData: Partial<Product> = {
       name: formData.get('name') as string,
       sku: formData.get('sku') as string,
       barcode: formData.get('barcode') as string,
       price: parseFloat(formData.get('price') as string),
       costPrice: parseFloat(formData.get('costPrice') as string) || 0,
-      stock: parseInt(formData.get('stock') as string),
+      stock: newStockValue,
       minStock: parseInt(formData.get('minStock') as string),
       category: formData.get('category') as string,
       expiryDate: formData.get('expiryDate') as string,
@@ -92,12 +101,47 @@ const Products: React.FC = () => {
     };
 
     if (editingProduct) {
+      // Registrar Ajuste Manual se o estoque mudou
+      if (editingProduct.stock !== newStockValue) {
+        const diff = newStockValue - editingProduct.stock;
+        const adjustment: StockMovement = {
+          id: Math.random().toString(36).substring(7).toUpperCase(),
+          productId: editingProduct.id,
+          productName: productData.name || editingProduct.name,
+          type: 'AJUSTE_MANUAL',
+          quantity: diff,
+          previousStock: editingProduct.stock,
+          currentStock: newStockValue,
+          timestamp: currentTimestamp,
+          operator: user?.name || 'Sistema',
+          description: 'Ajuste manual via cadastro de produtos'
+        };
+        setStockMovements(prev => [adjustment, ...prev]);
+      }
       setProducts(prev => prev.map(p => p.id === editingProduct.id ? { ...p, ...productData } : p));
     } else {
+      const newId = Math.random().toString(36).substring(7);
       const newProduct: Product = {
         ...productData as Product,
-        id: Math.random().toString(36).substring(7),
+        id: newId,
       };
+      
+      // Registrar movimento inicial
+      if (newStockValue > 0) {
+        const initialMovement: StockMovement = {
+          id: Math.random().toString(36).substring(7).toUpperCase(),
+          productId: newId,
+          productName: newProduct.name,
+          type: 'AJUSTE_MANUAL',
+          quantity: newStockValue,
+          previousStock: 0,
+          currentStock: newStockValue,
+          timestamp: currentTimestamp,
+          operator: user?.name || 'Sistema',
+          description: 'Estoque inicial no cadastro'
+        };
+        setStockMovements(prev => [initialMovement, ...prev]);
+      }
       setProducts(prev => [...prev, newProduct]);
     }
     setIsModalOpen(false);
@@ -215,6 +259,13 @@ const Products: React.FC = () => {
                     <td className="px-10 py-8 text-right">
                       <div className="flex justify-end gap-3 md:opacity-0 group-hover:opacity-100 transition-all">
                         <button 
+                          onClick={() => { setHistoryProduct(product); setIsHistoryModalOpen(true); }}
+                          title="Histórico de Movimentação"
+                          className="w-12 h-12 bg-slate-100 text-slate-500 hover:bg-emerald-600 hover:text-white rounded-xl flex items-center justify-center transition-all shadow-sm"
+                        >
+                          <History size={20} />
+                        </button>
+                        <button 
                           onClick={() => { setEditingProduct(product); setIsModalOpen(true); }}
                           className="w-12 h-12 bg-slate-100 text-slate-500 hover:bg-blue-600 hover:text-white rounded-xl flex items-center justify-center transition-all shadow-sm"
                         >
@@ -236,7 +287,75 @@ const Products: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal Gerenciar Categorias */}
+      {/* Modal Histórico (Kardex) */}
+      {isHistoryModalOpen && historyProduct && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md">
+           <div className="bg-white rounded-[40px] w-full max-w-4xl h-[80vh] flex flex-col shadow-2xl animate-in zoom-in-95 duration-200">
+              <div className="p-10 border-b flex justify-between items-center bg-slate-50 rounded-t-[40px]">
+                 <div>
+                   <h2 className="text-2xl font-black text-slate-800 flex items-center gap-3">
+                     <History size={28} className="text-emerald-600" /> Histórico de Movimentação
+                   </h2>
+                   <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">{historyProduct.name} ({historyProduct.sku})</p>
+                 </div>
+                 <button onClick={() => setIsHistoryModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                   <X size={28} />
+                 </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-10 custom-scrollbar">
+                 <div className="space-y-4">
+                    {productMovements.length === 0 ? (
+                      <div className="py-20 text-center opacity-30">
+                        <RefreshCcw size={60} className="mx-auto mb-4" />
+                        <p className="font-black uppercase tracking-widest">Nenhuma movimentação registrada</p>
+                      </div>
+                    ) : (
+                      productMovements.map(m => (
+                        <div key={m.id} className="p-6 bg-slate-50 rounded-3xl border-2 border-transparent hover:border-blue-100 flex items-center justify-between transition-all">
+                           <div className="flex items-center gap-6">
+                              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg ${
+                                m.quantity > 0 ? 'bg-emerald-500 shadow-emerald-200' : 'bg-red-500 shadow-red-200'
+                              }`}>
+                                 {m.quantity > 0 ? <ArrowUpCircle size={24} /> : <ArrowDownCircle size={24} />}
+                              </div>
+                              <div>
+                                 <p className="font-black text-slate-800">{m.description || m.type}</p>
+                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                   {m.timestamp} • Operador: {m.operator}
+                                 </p>
+                              </div>
+                           </div>
+                           <div className="text-right">
+                              <p className={`text-xl font-black ${m.quantity > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                {m.quantity > 0 ? '+' : ''}{m.quantity} UN
+                              </p>
+                              <p className="text-[10px] font-black text-slate-400 uppercase">Estoque: {m.currentStock} UN</p>
+                           </div>
+                        </div>
+                      ))
+                    )}
+                 </div>
+              </div>
+
+              <div className="p-10 border-t bg-slate-50 flex justify-between items-center rounded-b-[40px]">
+                 <div className="flex gap-10">
+                    <div>
+                       <p className="text-[10px] font-black text-slate-400 uppercase">Estoque Atual</p>
+                       <p className="text-2xl font-black text-slate-800">{historyProduct.stock} UN</p>
+                    </div>
+                    <div>
+                       <p className="text-[10px] font-black text-slate-400 uppercase">Custo Médio</p>
+                       <p className="text-2xl font-black text-blue-600">R$ {historyProduct.costPrice.toFixed(2)}</p>
+                    </div>
+                 </div>
+                 <button onClick={() => setIsHistoryModalOpen(false)} className="px-10 py-5 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest btn-touch-active">FECHAR FICHA</button>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* (rest of Category and Product Modals remain the same) */}
       {isCategoryModalOpen && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md">
           <div className="bg-white rounded-[40px] w-full max-w-lg p-10 shadow-2xl animate-in zoom-in-95 duration-200">
@@ -287,7 +406,6 @@ const Products: React.FC = () => {
         </div>
       )}
 
-      {/* Modal Produto */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md">
           <form onSubmit={handleSave} className="bg-white rounded-[40px] w-full max-w-4xl p-12 shadow-2xl animate-in zoom-in-95 duration-200 overflow-y-auto max-h-[90vh] custom-scrollbar">
@@ -325,7 +443,6 @@ const Products: React.FC = () => {
                 </div>
               </div>
 
-              {/* Seção Dinâmica: Vestuário ou Calçados */}
               {(selectedCategory === 'Vestuário' || selectedCategory === 'Calçados') && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-purple-50 p-8 rounded-[32px] border-2 border-purple-100 animate-in slide-in-from-top-4 duration-300">
                   <div className="flex flex-col gap-2">
@@ -353,7 +470,6 @@ const Products: React.FC = () => {
                 </div>
               )}
 
-              {/* Seção de Precificação */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-slate-50 p-8 rounded-[32px] border-2 border-slate-100">
                 <div className="flex flex-col gap-2">
                   <label className="text-xs font-black text-emerald-600 uppercase tracking-widest flex items-center gap-2">

@@ -1,13 +1,13 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useApp } from '../App';
-import { Product, CartItem, Sale, Client } from '../types';
+import { Product, CartItem, Sale, Client, StockMovement } from '../types';
 import { PAYMENT_METHODS, ICONS } from '../constants';
 import { ShoppingCart, Search, Package, Plus, Minus, X, UserCheck, UserPlus, User, ArrowLeft, Lock, LogIn, Printer, UserCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const PDV: React.FC = () => {
-  const { products, setProducts, setSales, user, clients, categories, cashSession } = useApp();
+  const { products, setProducts, setSales, user, clients, categories, cashSession, setStockMovements } = useApp();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [activeCategory, setActiveCategory] = useState('Todos');
   const [searchTerm, setSearchTerm] = useState('');
@@ -124,9 +124,10 @@ const PDV: React.FC = () => {
   const handleFinishSale = (method: string) => {
     const cashValue = parseFloat(amountReceived) || total;
     const change = Math.max(0, cashValue - total);
+    const saleId = Math.random().toString(36).substring(7).toUpperCase();
 
     const sale: Sale = {
-      id: Math.random().toString(36).substring(7).toUpperCase(),
+      id: saleId,
       items: [...cart],
       subtotal,
       total,
@@ -143,11 +144,35 @@ const PDV: React.FC = () => {
       change: method === 'DINHEIRO' ? change : 0
     };
     
+    // Atualizar estoque e gerar movimentações
+    const newMovements: StockMovement[] = [];
+    
     setProducts(prev => prev.map(p => {
       const cartItem = cart.find(ci => ci.id === p.id);
-      return cartItem ? { ...p, stock: p.stock - cartItem.quantity } : p;
+      if (cartItem) {
+        const currentStock = p.stock - cartItem.quantity;
+        
+        // Registrar movimentação
+        newMovements.push({
+          id: Math.random().toString(36).substring(7).toUpperCase(),
+          productId: p.id,
+          productName: p.name,
+          type: 'VENDA_PDV',
+          quantity: -cartItem.quantity,
+          previousStock: p.stock,
+          currentStock: currentStock,
+          timestamp: sale.timestamp,
+          referenceId: saleId,
+          operator: sale.operator,
+          description: `Venda PDV #${saleId}`
+        });
+        
+        return { ...p, stock: currentStock };
+      }
+      return p;
     }));
 
+    setStockMovements(prev => [...newMovements, ...prev]);
     setLastSale(sale);
     setSales(prev => [...prev, sale]);
     setShowPaymentModal(false);
@@ -219,7 +244,7 @@ const PDV: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-[#f1f5f9] select-none">
-      {/* Bloqueio de Caixa Fechado */}
+      {/* ... (rest of PDV rendering remains largely same) ... */}
       {!cashSession.isOpen && (
         <div className="fixed inset-0 z-[300] bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-6 no-print">
            <div className="bg-white rounded-[40px] p-12 max-w-lg w-full text-center shadow-2xl animate-in zoom-in-95 duration-300">
@@ -241,7 +266,6 @@ const PDV: React.FC = () => {
         </div>
       )}
 
-      {/* Recibo para Impressão */}
       {lastSale && (
         <div className="print-only print-content">
           <pre style={{ fontFamily: 'monospace', fontSize: '12px', lineHeight: '1.2', whiteSpace: 'pre-wrap', margin: 0, width: '100%' }}>
@@ -326,7 +350,6 @@ const PDV: React.FC = () => {
           </span>
         </div>
 
-        {/* Info Cliente no Cupom */}
         {selectedClient && (
           <div className="p-3 bg-blue-50 border-b flex items-center justify-between">
              <div className="flex items-center gap-2 text-blue-700">
@@ -372,7 +395,6 @@ const PDV: React.FC = () => {
         </div>
 
         <div className="p-5 bg-slate-900 text-white rounded-t-[32px] shadow-[0_-10px_30px_rgba(0,0,0,0.1)]">
-          {/* Botão Identificar Cliente (CPF na Nota) */}
           <button 
             onClick={() => setShowClientModal(true)}
             className={`w-full mb-4 py-3 rounded-xl flex items-center justify-center gap-2 font-black text-[10px] uppercase tracking-widest transition-all ${
@@ -395,7 +417,6 @@ const PDV: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal Identificar Cliente / CPF */}
       {showClientModal && (
         <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-sm no-print">
           <div className="bg-white rounded-[40px] w-full max-w-lg p-10 shadow-2xl animate-in zoom-in-95 duration-200">

@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { HashRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
-import { User, UserRole, Product, Sale, Transaction, Supplier, Client, CashSession, StockEntry } from './types';
+import { User, UserRole, Product, Sale, Transaction, Supplier, Client, CashSession, StockEntry, StockMovement } from './types';
 import { MOCK_USER, INITIAL_PRODUCTS, INITIAL_SUPPLIERS } from './services/mockData';
 import { ICONS, CATEGORIES as INITIAL_CATEGORIES } from './constants';
-import { LayoutDashboard, ShoppingCart, Package, Users, DollarSign, BarChart3, Settings, LogOut, Plus, Minus, Trash2, Search, ChevronRight, User as UserIcon, Clock, Printer, XCircle, Pause, CheckCircle2, Inbox } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Package, Users, DollarSign, BarChart3, Settings, LogOut, Plus, Minus, Trash2, Search, ChevronRight, User as UserIcon, Clock, Printer, XCircle, Pause, CheckCircle2, Inbox, History } from 'lucide-react';
 
 interface AppContextType {
   user: User | null;
@@ -23,6 +23,8 @@ interface AppContextType {
   setSuppliers: React.Dispatch<React.SetStateAction<Supplier[]>>;
   stockEntries: StockEntry[];
   setStockEntries: React.Dispatch<React.SetStateAction<StockEntry[]>>;
+  stockMovements: StockMovement[];
+  setStockMovements: React.Dispatch<React.SetStateAction<StockMovement[]>>;
   cashSession: CashSession;
   setCashSession: React.Dispatch<React.SetStateAction<CashSession>>;
 }
@@ -132,6 +134,7 @@ const App: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>(INITIAL_SUPPLIERS);
   const [stockEntries, setStockEntries] = useState<StockEntry[]>([]);
+  const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
   const [cashSession, setCashSession] = useState<CashSession>({
     isOpen: false,
     startingBalance: 0,
@@ -150,6 +153,7 @@ const App: React.FC = () => {
     transactions, setTransactions,
     suppliers, setSuppliers,
     stockEntries, setStockEntries,
+    stockMovements, setStockMovements,
     cashSession, setCashSession
   };
 

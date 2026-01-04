@@ -1,11 +1,11 @@
 
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../App';
-import { StockEntry, StockEntryItem, Product } from '../types';
+import { StockEntry, StockEntryItem, Product, StockMovement } from '../types';
 import { Package, Truck, FileText, Plus, Search, Trash2, CheckCircle2, X, ShoppingBag } from 'lucide-react';
 
 const Inventory: React.FC = () => {
-  const { products, setProducts, suppliers, stockEntries, setStockEntries } = useApp();
+  const { products, setProducts, suppliers, stockEntries, setStockEntries, setStockMovements, user } = useApp();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -72,9 +72,10 @@ const Inventory: React.FC = () => {
 
     const supplier = suppliers.find(s => s.id === newEntry.supplierId);
     const totalValue = newEntry.items.reduce((acc, it) => acc + (it.costPrice * it.quantity), 0);
+    const entryId = Math.random().toString(36).substring(7).toUpperCase();
 
     const entryRecord: StockEntry = {
-      id: Math.random().toString(36).substring(7).toUpperCase(),
+      id: entryId,
       invoiceNumber: newEntry.invoiceNumber,
       supplierId: newEntry.supplierId,
       supplierName: supplier?.name || 'Fornecedor Desconhecido',
@@ -83,18 +84,40 @@ const Inventory: React.FC = () => {
       date: new Date().toLocaleString()
     };
 
-    // 1. Atualizar estoque dos produtos e preço de custo
+    // 1. Atualizar estoque dos produtos, preço de custo e registrar movimentos
+    const newMovements: StockMovement[] = [];
+    
     setProducts(prev => prev.map(p => {
       const entryItem = newEntry.items.find(ei => ei.productId === p.id);
       if (entryItem) {
+        const currentStock = p.stock + entryItem.quantity;
+        
+        // Gerar movimento
+        newMovements.push({
+          id: Math.random().toString(36).substring(7).toUpperCase(),
+          productId: p.id,
+          productName: p.name,
+          type: 'ENTRADA_NF',
+          quantity: entryItem.quantity,
+          previousStock: p.stock,
+          currentStock: currentStock,
+          timestamp: entryRecord.date,
+          referenceId: entryRecord.invoiceNumber,
+          operator: user?.name || 'Sistema',
+          description: `Entrada NF #${entryRecord.invoiceNumber} - ${entryRecord.supplierName}`
+        });
+
         return {
           ...p,
-          stock: p.stock + entryItem.quantity,
-          costPrice: entryItem.costPrice // Atualiza o custo médio/último custo
+          stock: currentStock,
+          costPrice: entryItem.costPrice 
         };
       }
       return p;
     }));
+
+    // Salvar movimentos
+    setStockMovements(prev => [...newMovements, ...prev]);
 
     // 2. Salvar entrada
     setStockEntries(prev => [entryRecord, ...prev]);
@@ -106,6 +129,7 @@ const Inventory: React.FC = () => {
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 overflow-y-auto h-full custom-scrollbar">
+      {/* (rest of the Inventory UI remains the same) */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-4xl font-black text-slate-800 tracking-tighter uppercase">Gestão de Estoque</h1>

@@ -34,6 +34,22 @@ export interface Product {
   color?: string;
 }
 
+export type MovementType = 'ENTRADA_NF' | 'VENDA_PDV' | 'AJUSTE_MANUAL' | 'DEVOLUCAO';
+
+export interface StockMovement {
+  id: string;
+  productId: string;
+  productName: string;
+  type: MovementType;
+  quantity: number; // Positivo para entrada, Negativo para saída
+  previousStock: number;
+  currentStock: number;
+  timestamp: string;
+  referenceId?: string; // ID da Venda ou Número da NF
+  operator: string;
+  description?: string;
+}
+
 export interface CartItem extends Product {
   quantity: number;
 }
