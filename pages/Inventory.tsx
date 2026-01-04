@@ -2,12 +2,14 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../App';
 import { StockEntry, StockEntryItem, Product, StockMovement } from '../types';
-import { Package, Truck, FileText, Plus, Search, Trash2, CheckCircle2, X, ShoppingBag, Edit3, Calendar } from 'lucide-react';
+import { Package, Truck, FileText, Plus, Search, Trash2, CheckCircle2, X, ShoppingBag, Edit3, Calendar, FilterX } from 'lucide-react';
 
 const Inventory: React.FC = () => {
   const { products, setProducts, suppliers, stockEntries, setStockEntries, setStockMovements, user } = useApp();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   
   // Estado para nova entrada ou edição
@@ -25,17 +27,28 @@ const Inventory: React.FC = () => {
 
   const [productSearch, setProductSearch] = useState('');
 
-  const filteredEntries = stockEntries.filter(e => 
-    e.invoiceNumber.includes(searchTerm) || e.supplierName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
+  // Fix: Added missing 'matchedProducts' memoization to filter products based on user input in the stock entry modal
   const matchedProducts = useMemo(() => {
-    if (!productSearch) return [];
+    if (productSearch.length < 2) return [];
     return products.filter(p => 
       p.name.toLowerCase().includes(productSearch.toLowerCase()) || 
-      p.barcode.includes(productSearch)
+      p.barcode.includes(productSearch) ||
+      p.sku.toLowerCase().includes(productSearch.toLowerCase())
     ).slice(0, 5);
   }, [products, productSearch]);
+
+  const filteredEntries = useMemo(() => {
+    return stockEntries.filter(e => {
+      const matchText = e.invoiceNumber.includes(searchTerm) || 
+                        e.supplierName.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const entryDate = e.invoiceDate; // Formato YYYY-MM-DD
+      const matchStart = !startDate || entryDate >= startDate;
+      const matchEnd = !endDate || entryDate <= endDate;
+
+      return matchText && matchStart && matchEnd;
+    });
+  }, [stockEntries, searchTerm, startDate, endDate]);
 
   const handleEditClick = (entry: StockEntry) => {
     setEditingEntryId(entry.id);
@@ -92,26 +105,20 @@ const Inventory: React.FC = () => {
     let newMovements: StockMovement[] = [];
 
     if (editingEntryId) {
-      // MODO EDIÇÃO: 
       const oldEntry = stockEntries.find(e => e.id === editingEntryId);
       if (!oldEntry) return;
 
       setProducts(prev => prev.map(p => {
         let updatedP = { ...p };
-        
-        // 1. Reverter estoque antigo (subtrair o que a nota antiga somou)
         const oldItem = oldEntry.items.find(oi => oi.productId === p.id);
         if (oldItem) {
           updatedP.stock -= oldItem.quantity;
         }
-
-        // 2. Aplicar novo estoque (somar o que a nota nova pede)
         const newItem = newEntry.items.find(ni => ni.productId === p.id);
         if (newItem) {
           const previousStockForMovement = updatedP.stock;
           updatedP.stock += newItem.quantity;
           updatedP.costPrice = newItem.costPrice;
-
           newMovements.push({
             id: Math.random().toString(36).substring(7).toUpperCase(),
             productId: p.id,
@@ -126,11 +133,9 @@ const Inventory: React.FC = () => {
             description: `RETIFICAÇÃO NF #${newEntry.invoiceNumber} - ${supplier?.name}`
           });
         }
-        
         return updatedP;
       }));
 
-      // Atualizar a entrada na lista
       updatedStockEntries = updatedStockEntries.map(e => e.id === editingEntryId ? {
         ...e,
         invoiceNumber: newEntry.invoiceNumber,
@@ -143,7 +148,6 @@ const Inventory: React.FC = () => {
       } : e);
 
     } else {
-      // MODO CRIAÇÃO
       const entryId = Math.random().toString(36).substring(7).toUpperCase();
       const entryRecord: StockEntry = {
         id: entryId,
@@ -160,7 +164,6 @@ const Inventory: React.FC = () => {
         const entryItem = newEntry.items.find(ei => ei.productId === p.id);
         if (entryItem) {
           const currentStock = p.stock + entryItem.quantity;
-          
           newMovements.push({
             id: Math.random().toString(36).substring(7).toUpperCase(),
             productId: p.id,
@@ -174,19 +177,15 @@ const Inventory: React.FC = () => {
             operator: user?.name || 'Sistema',
             description: `Entrada NF #${entryRecord.invoiceNumber} - ${entryRecord.supplierName}`
           });
-
           return { ...p, stock: currentStock, costPrice: entryItem.costPrice };
         }
         return p;
       }));
-
       updatedStockEntries = [entryRecord, ...updatedStockEntries];
     }
 
     setStockMovements(prev => [...newMovements, ...prev]);
     setStockEntries(updatedStockEntries);
-    
-    // Reset e Fechar
     setIsModalOpen(false);
     setEditingEntryId(null);
     setNewEntry({ 
@@ -212,6 +211,11 @@ const Inventory: React.FC = () => {
     if (!dateStr) return 'N/I';
     const [year, month, day] = dateStr.split('-');
     return `${day}/${month}/${year}`;
+  };
+
+  const clearDateFilters = () => {
+    setStartDate('');
+    setEndDate('');
   };
 
   return (
@@ -240,29 +244,72 @@ const Inventory: React.FC = () => {
         <div className="bg-white p-6 rounded-[32px] shadow-sm border-2 border-slate-100">
            <div className="flex items-center gap-4 mb-2">
              <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl"><Truck size={24} /></div>
-             <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Entradas no Mês</p>
+             <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Entradas Exibidas</p>
            </div>
-           <p className="text-3xl font-black text-slate-800">{stockEntries.length} NF-e</p>
+           <p className="text-3xl font-black text-slate-800">{filteredEntries.length} NF-e</p>
         </div>
         <div className="bg-white p-6 rounded-[32px] shadow-sm border-2 border-slate-100">
            <div className="flex items-center gap-4 mb-2">
              <div className="p-3 bg-orange-50 text-orange-600 rounded-2xl"><ShoppingBag size={24} /></div>
-             <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Total Investido</p>
+             <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Total Exibido</p>
            </div>
-           <p className="text-3xl font-black text-slate-800">R$ {stockEntries.reduce((acc, e) => acc + e.totalValue, 0).toFixed(2)}</p>
+           <p className="text-3xl font-black text-slate-800">R$ {filteredEntries.reduce((acc, e) => acc + e.totalValue, 0).toFixed(2)}</p>
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-[32px] shadow-sm border-2 border-slate-100 flex items-center gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute inset-y-0 left-6 flex items-center pointer-events-none text-slate-400" size={24} />
-          <input 
-            type="text" 
-            placeholder="Filtrar por NF ou Fornecedor..."
-            className="w-full h-16 pl-16 pr-8 bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl outline-none font-bold transition-all"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      <div className="bg-white p-8 rounded-[40px] shadow-sm border-2 border-slate-100 space-y-6">
+        <div className="flex flex-col lg:flex-row gap-6">
+          <div className="relative flex-1">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Buscar NF ou Fornecedor</label>
+            <div className="relative">
+              <Search className="absolute inset-y-0 left-6 flex items-center pointer-events-none text-slate-400" size={24} />
+              <input 
+                type="text" 
+                placeholder="Ex: 000.123..."
+                className="w-full h-16 pl-16 pr-8 bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl outline-none font-bold transition-all"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col md:flex-row gap-4 flex-1">
+            <div className="flex-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Data Inicial (Nota)</label>
+              <div className="relative">
+                <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={20} />
+                <input 
+                  type="date" 
+                  className="w-full h-16 pl-14 pr-4 bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl outline-none font-bold transition-all"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Data Final (Nota)</label>
+              <div className="relative">
+                <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={20} />
+                <input 
+                  type="date" 
+                  className="w-full h-16 pl-14 pr-4 bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl outline-none font-bold transition-all"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex items-end">
+              {(startDate || endDate || searchTerm) && (
+                <button 
+                  onClick={() => { clearDateFilters(); setSearchTerm(''); }}
+                  className="h-16 px-6 bg-slate-100 text-slate-500 hover:text-red-500 rounded-2xl flex items-center gap-2 font-black text-xs uppercase transition-all"
+                  title="Limpar Filtros"
+                >
+                  <FilterX size={20} />
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -283,8 +330,10 @@ const Inventory: React.FC = () => {
                 <td className="px-10 py-8">
                   <div className="flex flex-col">
                     <span className="font-black text-slate-800 text-lg">NF: {entry.invoiceNumber}</span>
-                    <span className="text-xs font-bold text-slate-400 uppercase">Emissão: {formatDate(entry.invoiceDate)}</span>
-                    <span className="text-[10px] text-slate-300 font-bold uppercase mt-1">Registro: {entry.date}</span>
+                    <span className="text-xs font-bold text-blue-600 uppercase flex items-center gap-2 mt-1">
+                      <Calendar size={12} /> {formatDate(entry.invoiceDate)}
+                    </span>
+                    <span className="text-[10px] text-slate-300 font-bold uppercase mt-1">Reg: {entry.date}</span>
                   </div>
                 </td>
                 <td className="px-10 py-8">
@@ -312,7 +361,7 @@ const Inventory: React.FC = () => {
               <tr>
                 <td colSpan={5} className="px-10 py-20 text-center opacity-30">
                   <Package size={60} className="mx-auto mb-4" />
-                  <p className="font-black uppercase tracking-widest">Nenhuma nota fiscal registrada</p>
+                  <p className="font-black uppercase tracking-widest">Nenhuma nota encontrada para este filtro</p>
                 </td>
               </tr>
             )}
