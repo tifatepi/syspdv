@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { HashRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
-import { User, UserRole, Product, Sale, Transaction, Supplier, Client, CashSession } from './types';
+import { User, UserRole, Product, Sale, Transaction, Supplier, Client, CashSession, StockEntry } from './types';
 import { MOCK_USER, INITIAL_PRODUCTS, INITIAL_SUPPLIERS } from './services/mockData';
 import { ICONS, CATEGORIES as INITIAL_CATEGORIES } from './constants';
+import { LayoutDashboard, ShoppingCart, Package, Users, DollarSign, BarChart3, Settings, LogOut, Plus, Minus, Trash2, Search, ChevronRight, User as UserIcon, Clock, Printer, XCircle, Pause, CheckCircle2, Inbox } from 'lucide-react';
 
 interface AppContextType {
   user: User | null;
@@ -20,6 +21,8 @@ interface AppContextType {
   setTransactions: React.Dispatch<React.SetStateAction<Transaction[]>>;
   suppliers: Supplier[];
   setSuppliers: React.Dispatch<React.SetStateAction<Supplier[]>>;
+  stockEntries: StockEntry[];
+  setStockEntries: React.Dispatch<React.SetStateAction<StockEntry[]>>;
   cashSession: CashSession;
   setCashSession: React.Dispatch<React.SetStateAction<CashSession>>;
 }
@@ -40,6 +43,7 @@ import Reports from './pages/Reports';
 import Suppliers from './pages/Suppliers';
 import Clients from './pages/Clients';
 import SalesHistory from './pages/SalesHistory';
+import Inventory from './pages/Inventory';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useApp();
@@ -51,7 +55,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return () => clearInterval(timer);
   }, []);
 
-  // Login desabilitado por enquanto - sempre renderiza o layout se houver um mock_user
   const isPDV = location.pathname === '/pdv';
 
   return (
@@ -64,7 +67,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           <nav className="flex-1 py-4 overflow-y-auto custom-scrollbar">
             <NavLink to="/dashboard" icon={ICONS.Dashboard} label="Dashboard" active={location.pathname === '/dashboard'} />
             <NavLink to="/pdv" icon={ICONS.PDV} label="Venda (PDV)" active={location.pathname === '/pdv'} />
-            <NavLink to="/sales" icon={<div className="flex items-center justify-center w-6 h-6">{React.cloneElement(ICONS.Clock as React.ReactElement<any>, { size: 20 })}</div>} label="Histórico Vendas" active={location.pathname === '/sales'} />
+            <NavLink to="/inventory" icon={<Inbox size={20} />} label="Gestão Estoque" active={location.pathname === '/inventory'} />
+            <NavLink to="/sales" icon={<Clock size={20} />} label="Histórico Vendas" active={location.pathname === '/sales'} />
             <NavLink to="/products" icon={ICONS.Products} label="Produtos" active={location.pathname === '/products'} />
             <NavLink to="/clients" icon={ICONS.User} label="Clientes" active={location.pathname === '/clients'} />
             <NavLink to="/suppliers" icon={ICONS.Suppliers} label="Fornecedores" active={location.pathname === '/suppliers'} />
@@ -89,7 +93,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         {!isPDV && (
           <header className="h-14 bg-white border-b flex items-center justify-between px-6 z-10 no-print shadow-sm shrink-0">
             <h2 className="font-black text-slate-800 text-base uppercase tracking-widest">
-              {location.pathname === '/sales' ? 'Histórico de Vendas' : location.pathname.substring(1)}
+              {location.pathname === '/inventory' ? 'Gestão de Estoque' : location.pathname === '/sales' ? 'Histórico de Vendas' : location.pathname.substring(1)}
             </h2>
             <div className="flex items-center gap-4">
               <div className="text-slate-400 font-bold text-sm uppercase tracking-tighter">{time}</div>
@@ -114,7 +118,7 @@ const NavLink = ({ to, icon, label, active }: { to: string, icon: any, label: st
       : 'text-slate-400 hover:text-white hover:bg-slate-800'
     }`}
   >
-    <div className={active ? 'scale-110' : ''}>{React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<any>, { size: 20 }) : icon}</div>
+    <div className={active ? 'scale-110' : ''}>{icon}</div>
     <span className="font-bold text-sm">{label}</span>
   </Link>
 );
@@ -127,6 +131,7 @@ const App: React.FC = () => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>(INITIAL_SUPPLIERS);
+  const [stockEntries, setStockEntries] = useState<StockEntry[]>([]);
   const [cashSession, setCashSession] = useState<CashSession>({
     isOpen: false,
     startingBalance: 0,
@@ -144,6 +149,7 @@ const App: React.FC = () => {
     sales, setSales,
     transactions, setTransactions,
     suppliers, setSuppliers,
+    stockEntries, setStockEntries,
     cashSession, setCashSession
   };
 
@@ -154,6 +160,7 @@ const App: React.FC = () => {
           <Route path="/" element={<Navigate to="/dashboard" />} />
           <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
           <Route path="/pdv" element={<Layout><PDV /></Layout>} />
+          <Route path="/inventory" element={<Layout><Inventory /></Layout>} />
           <Route path="/sales" element={<Layout><SalesHistory /></Layout>} />
           <Route path="/products" element={<Layout><Products /></Layout>} />
           <Route path="/clients" element={<Layout><Clients /></Layout>} />

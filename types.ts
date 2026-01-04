@@ -66,6 +66,23 @@ export interface Supplier {
   cnpj: string;
 }
 
+export interface StockEntryItem {
+  productId: string;
+  name: string;
+  quantity: number;
+  costPrice: number;
+}
+
+export interface StockEntry {
+  id: string;
+  invoiceNumber: string;
+  supplierId: string;
+  supplierName: string;
+  items: StockEntryItem[];
+  totalValue: number;
+  date: string;
+}
+
 export interface Transaction {
   id: string;
   type: 'INCOME' | 'EXPENSE' | 'SANGRIA' | 'SUPRIMENTO';
